@@ -57,7 +57,8 @@ struct DirModel {
     name: String,
     parents: Vec<Link>,
     dirs: Vec<Link>,
-    notes: Vec<Link>
+    notes: Vec<Link>,
+    base_url: String
 }
 
 impl ToJson for DirModel {
@@ -67,6 +68,7 @@ impl ToJson for DirModel {
         m.insert("parents".to_string(), self.parents.to_json());
         m.insert("dirs".to_string(), self.dirs.to_json());
         m.insert("notes".to_string(), self.notes.to_json());
+        m.insert("baseUrl".to_string(), self.base_url.to_json());
         Json::Object(m)
     }
 }
@@ -75,6 +77,7 @@ struct NoteModel {
     name: String,
     parents: Vec<Link>,
     content: String,
+    base_url: String
 }
 
 impl ToJson for NoteModel {
@@ -83,18 +86,33 @@ impl ToJson for NoteModel {
         m.insert("name".to_string(), self.name.to_json());
         m.insert("parents".to_string(), self.parents.to_json());
         m.insert("content".to_string(), self.content.to_json());
+        m.insert("baseUrl".to_string(), self.base_url.to_json());
         Json::Object(m)
     }
 }
 
 
+fn cp_dir(source: &Path, dest: &Path) {
+    fs::mkdir(dest, USER_DIR).ok().expect("Problem copying directory");
+    for item in fs::walk_dir(source).ok().expect("Problem copying directory") {
+        let relative = item.clone().path_relative_from(source).unwrap();
+        let dest_path = dest.clone().join(relative.as_str().unwrap());
+        if item.is_file() {
+            fs::copy(&item, &dest_path).ok().expect("Problem copying directory");
+        } else {
+            fs::mkdir(&dest_path, USER_DIR).ok().expect("Problem copying directory");
+        }
+    }
+}
+
 struct Generator {
     root_source_path: Path,
     root_dest_path: Path,
-    notes_source_path: Path,
+    notes_source_path: Path, 
     handlebars: Handlebars,
     dir_template_name: &'static str,
-    note_template_name: &'static str
+    note_template_name: &'static str,
+    base_url: String
 }
 
 impl Generator {
@@ -120,14 +138,24 @@ impl Generator {
             return Err("Source directory missing required files");
         }
 
-        let dir_hbs_path = source_path.clone().join("dir.hbs");
+        let dir_hbs_path = source_path.clone().join("layouts/dir.hbs");
         if !dir_hbs_path.exists() {
-            return Err("Source directory missing dir.hbs");
+            return Err("Missing /layouts/dir.hbs");
         }
 
-        let note_hbs_path = source_path.clone().join("note.hbs");
+        let note_hbs_path = source_path.clone().join("layouts/note.hbs");
         if !note_hbs_path.exists() {
-            return Err("Source directory missing note.hbs");
+            return Err("Missing /layouts/note.hbs");
+        }
+
+        let header_hbs_path = source_path.clone().join("partials/header.hbs");
+        if !header_hbs_path.exists() {
+            return Err("Missing partials/header.hbs");
+        }
+
+        let footer_hbs_path = source_path.clone().join("partials/footer.hbs");
+        if !footer_hbs_path.exists() {
+            return Err("Missing partials/footer.hbs");
         }
 
         // Good to go! Let's return something good
@@ -137,12 +165,14 @@ impl Generator {
 
         let dir_hbs_contents = File::open(&dir_hbs_path).read_to_string().unwrap();
         let note_hbs_contents = File::open(&note_hbs_path).read_to_string().unwrap();
+        let header_hbs_contents = File::open(&header_hbs_path).read_to_string().unwrap();
+        let footer_hbs_contents = File::open(&footer_hbs_path).read_to_string().unwrap();
 
         let mut handlebars = Handlebars::new();
-        handlebars.register_template_string(dir_template_name, dir_hbs_contents.to_string())
-            .ok().expect("Error registering dir template");
-        handlebars.register_template_string(note_template_name, note_hbs_contents.to_string())
-            .ok().expect("Error registering note template");
+        handlebars.register_template_string(dir_template_name, format!("{}\n{}\n{}", header_hbs_contents, dir_hbs_contents, footer_hbs_contents))
+            .ok().expect("Error registering header|dir|footer template");
+        handlebars.register_template_string(note_template_name, format!("{}\n{}\n{}", header_hbs_contents, note_hbs_contents, footer_hbs_contents))
+            .ok().expect("Error registering header|note|footer template");
         
         Ok(Generator{
             root_source_path: source_path,
@@ -150,12 +180,18 @@ impl Generator {
             notes_source_path: notes_source_path,
             handlebars: handlebars,
             dir_template_name: dir_template_name,
-            note_template_name: note_template_name
+            note_template_name: note_template_name,
+            base_url: String::from_str("")
         })
     }
 
     pub fn begin(&self) {
         self.clean_dest();
+        let assets_source_path = self.root_source_path.clone().join("assets");
+        if assets_source_path.is_dir() {
+            let assets_dest_path = self.root_dest_path.clone().join("assets");
+            cp_dir(&assets_source_path, &assets_dest_path);
+        }
         self.generate_dir(&Path::new(""));
     }
 
@@ -188,18 +224,21 @@ impl Generator {
 
             // Create Model
             let content = Markdown(source_contents.as_slice());
-            let parents = Generator::get_parent_links(relative_path, true);
+            let parents = self.get_parent_links(relative_path, true);
 
             let model = NoteModel {
                 name: String::from_str(file_name),
                 parents : parents,
-                content : format!("{}", content)
+                content : format!("{}", content),
+                base_url: self.base_url.clone()
             };
 
             match self.handlebars.render(self.note_template_name, &model) {
                 Ok(rendered) => {
                     // Create File
-                    let new_rendered = String::from_str(rendered.as_slice()).replace("\\n", "");
+                    let new_rendered = String::from_str(rendered.as_slice())
+                        .replace("\\n", "")
+                        .replace("\\\"", "\"");
                     let new_file_path = dest_parent_dir_path.join(format!("{}.html", file_name));
                     let mut file = File::create(&new_file_path).ok().expect("Could not note html file");
                     fs::chmod(&new_file_path, USER_FILE).ok().expect("Couldn't chmod new file");
@@ -243,19 +282,19 @@ impl Generator {
         true
     }
 
-    fn get_parent_links(path: &Path, is_note: bool) -> Vec<Link> {
+    fn get_parent_links(&self, path: &Path, is_note: bool) -> Vec<Link> {
         if !is_note && path.filename().is_none() {
             Vec::new()
         } else {
             let mut result: Vec<Link> = vec![Link {
                 name: String::from_str("root"),
-                url: String::from_str("/")
+                url: format!("{}/", self.base_url)
             }];
             let mut temp = path.clone().dir_path();
             while temp.filename().is_some() {
                 result.insert(1, Link {
                     name: String::from_str(temp.filename_str().unwrap()),
-                    url: format!("/{}", temp.as_str().unwrap())
+                    url: format!("{}/{}", self.base_url, temp.as_str().unwrap())
                 });
                 temp.pop();
             }
@@ -289,14 +328,14 @@ impl Generator {
                         let url = relative_path.clone().join(format!("{}.html", name).as_slice());
                         notes.push(Link{
                             name: String::from_str(name),
-                            url: String::from_str(format!("/{}", url.as_str().unwrap()).as_slice())
+                            url: String::from_str(format!("{}/{}", self.base_url, url.as_str().unwrap()).as_slice())
                         });
                     } else if Generator::dir_contains_note(item) {
                         let name = item.filename_str().unwrap();
                         let url = relative_path.clone().join(name);
                         dirs.push(Link{
                             name: String::from_str(name),
-                            url: String::from_str(format!("/{}", url.as_str().unwrap()).as_slice())
+                            url: String::from_str(format!("{}/{}", self.base_url, url.as_str().unwrap()).as_slice())
                         });
                     }
                 }
@@ -306,9 +345,10 @@ impl Generator {
 
         let model = DirModel {
             name: String::from_str(name),
-            parents: Generator::get_parent_links(relative_path, false),
+            parents: self.get_parent_links(relative_path, false),
             dirs: dirs,
-            notes: notes
+            notes: notes,
+            base_url: self.base_url.clone()
         };
         
         match self.handlebars.render(self.dir_template_name, &model) {
