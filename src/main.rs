@@ -196,8 +196,6 @@ impl Generator {
                 content : format!("{}", content)
             };
 
-            println!("content: {}", content);
-
             match self.handlebars.render(self.note_template_name, &model) {
                 Ok(rendered) => {
                     // Create File
