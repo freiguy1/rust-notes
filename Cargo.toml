@@ -1,0 +1,13 @@
+[package]
+
+name = "rust-notes"
+version = "0.0.1"
+authors = ["Ethan Frei <ethan.frei@gmail.com>"]
+
+[dependencies]
+docopt = "*"
+rustc-serialize = "*"
+
+[dependencies.handlebars]
+
+path = "/home/freied/dev/rust/handlebars-rust"
