@@ -71,14 +71,21 @@ impl ToJson for DirModel {
     }
 }
 
-/*
-#[derive(Show, Decodable)]
 struct NoteModel {
     name: String,
     parents: Vec<Link>,
     content: String,
 }
-*/
+
+impl ToJson for NoteModel {
+    fn to_json(&self) -> Json {
+        let mut m = BTreeMap::new();
+        m.insert("name".to_string(), self.name.to_json());
+        m.insert("parents".to_string(), self.parents.to_json());
+        m.insert("content".to_string(), self.content.to_json());
+        Json::Object(m)
+    }
+}
 
 
 struct Generator {
@@ -118,18 +125,24 @@ impl Generator {
             return Err("Source directory missing dir.hbs");
         }
 
+        let note_hbs_path = source_path.clone().join("note.hbs");
+        if !note_hbs_path.exists() {
+            return Err("Source directory missing note.hbs");
+        }
+
         // Good to go! Let's return something good
 
         let dir_template_name = "dir_template";
         let note_template_name = "note_template";
 
         let dir_hbs_contents = File::open(&dir_hbs_path).read_to_string().unwrap();
-        //println!("dir_hbs_contents: {}", dir_hbs_contents);
+        let note_hbs_contents = File::open(&note_hbs_path).read_to_string().unwrap();
+
         let mut handlebars = Handlebars::new();
-        match handlebars.register_template_string(dir_template_name, dir_hbs_contents.to_string()) {
-            Err(why) => panic!("Error registering template: {:?}", why),
-            _ => ()
-        }
+        handlebars.register_template_string(dir_template_name, dir_hbs_contents.to_string())
+            .ok().expect("Error registering dir template");
+        handlebars.register_template_string(note_template_name, note_hbs_contents.to_string())
+            .ok().expect("Error registering note template");
         
         Ok(Generator{
             root_source_path: source_path,
@@ -158,7 +171,7 @@ impl Generator {
             Ok(items) => {
                 for item in items.iter() {
                     if item.is_file() {
-                        self.convert_file(item, &full_dest_path);
+                        self.convert_file(item, &full_dest_path, relative_path);
                     } else {
                         self.convert_dir(item, &full_dest_path, relative_path);
                     }
@@ -168,28 +181,50 @@ impl Generator {
         }
     }
 
-    fn convert_file(&self, source_file_path: &Path, dest_parent_dir_path: &Path) {
+    fn convert_file(&self, source_file_path: &Path, dest_parent_dir_path: &Path, relative_path: &Path) {
         if Generator::is_markdown_file(source_file_path) {
             let source_contents = File::open(source_file_path).read_to_string().unwrap();
-            let new_file_path = dest_parent_dir_path.join(format!("{}.html", source_file_path.filestem_str().unwrap()));
-            //println!("Creating file '{:?}'", new_file_path);
-            let mut file = File::create(&new_file_path).ok().expect("Could not create html file");
-            fs::chmod(&new_file_path, USER_FILE).ok().expect("Couldn't chmod new file");
-            let markdown_content = Markdown(source_contents.as_slice());
-            file.write_str(format!("{}", markdown_content).as_slice())
-                .ok().expect("Could not write html to file");
+            let file_name = source_file_path.filestem_str().unwrap();
+
+            // Create Model
+            let content = Markdown(source_contents.as_slice());
+            let parents = Generator::get_parent_links(relative_path, true);
+
+            let model = NoteModel {
+                name: String::from_str(file_name),
+                parents : parents,
+                content : format!("{}", content)
+            };
+
+            println!("content: {}", content);
+
+            match self.handlebars.render(self.note_template_name, &model) {
+                Ok(rendered) => {
+                    // Create File
+                    let new_rendered = String::from_str(rendered.as_slice()).replace("\\n", "");
+                    let new_file_path = dest_parent_dir_path.join(format!("{}.html", file_name));
+                    let mut file = File::create(&new_file_path).ok().expect("Could not note html file");
+                    fs::chmod(&new_file_path, USER_FILE).ok().expect("Couldn't chmod new file");
+                    file.write_str(new_rendered.as_slice())
+                        .ok().expect("Could not write html to file");
+                },
+                Err(why) => panic!("Error rendering note: {:?}", why)
+            }
         }
     }
 
-    fn convert_dir(&self, source_dir_path: &Path, dest_parent_dir_path: &Path, relative_path: &Path) {
+    fn dir_contains_note(path: &Path) -> bool {
         let mut contains_note: bool = false;
-        let mut dirs = fs::walk_dir(source_dir_path)
+        let mut dirs = fs::walk_dir(path)
             .ok().expect("Could not walk through directories recursively");
         for item2 in dirs {
             contains_note |= Generator::is_markdown_file(&item2);
         }
+        contains_note
+    }
 
-        if contains_note {
+    fn convert_dir(&self, source_dir_path: &Path, dest_parent_dir_path: &Path, relative_path: &Path) {
+        if Generator::dir_contains_note(source_dir_path) {
             let dirname = source_dir_path.filename_str().unwrap();
             let new_dir_path = dest_parent_dir_path.clone().join(dirname);
             //println!("creating directory: {:?}", new_dir_path);
@@ -210,33 +245,37 @@ impl Generator {
         true
     }
 
+    fn get_parent_links(path: &Path, is_note: bool) -> Vec<Link> {
+        if !is_note && path.filename().is_none() {
+            Vec::new()
+        } else {
+            let mut result: Vec<Link> = vec![Link {
+                name: String::from_str("root"),
+                url: String::from_str("/")
+            }];
+            let mut temp = path.clone().dir_path();
+            while temp.filename().is_some() {
+                result.insert(1, Link {
+                    name: String::from_str(temp.filename_str().unwrap()),
+                    url: format!("/{}", temp.as_str().unwrap())
+                });
+                temp.pop();
+            }
+            result
+        }
+    }
+
     fn create_dir_index(&self, dir_path: &Path, relative_path: &Path) {
         let new_file_path = dir_path.join("index.html");
         let dirname = dir_path.filename_str().unwrap();
         let mut file = File::create(&new_file_path).ok().expect("Could not create html file");
         fs::chmod(&new_file_path, USER_FILE).ok().expect("Couldn't chmod new file");
 
-        //  Parents
-        let mut parents: Vec<Link> = Vec::new();
-
-        let mut temp = relative_path.clone();
-        temp.pop();
-        while temp.filename_str().is_some() {
-            parents.insert(0, Link {
-                name: String::from_str(temp.filename_str().unwrap()),
-                url: format!("/{}", temp.as_str().unwrap())
-            });
-            temp.pop();
-        }
 
         // Name
         let name = if relative_path.as_str().unwrap() == "." {
-            "Notes"
+            "root"
         } else {
-            parents.insert(0, Link {
-                name: String::from_str("Home"),
-                url: String::from_str("/")
-            });
             dirname
         };
 
@@ -254,7 +293,7 @@ impl Generator {
                             name: String::from_str(name),
                             url: String::from_str(format!("/{}", url.as_str().unwrap()).as_slice())
                         });
-                    } else {
+                    } else if Generator::dir_contains_note(item) {
                         let name = item.filename_str().unwrap();
                         let url = relative_path.clone().join(name);
                         dirs.push(Link{
@@ -269,7 +308,7 @@ impl Generator {
 
         let model = DirModel {
             name: String::from_str(name),
-            parents: parents,
+            parents: Generator::get_parent_links(relative_path, false),
             dirs: dirs,
             notes: notes
         };
