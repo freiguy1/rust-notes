@@ -207,7 +207,8 @@ impl Generator {
             Ok(items) => {
                 for item in items.iter() {
                     if item.is_file() {
-                        self.convert_file(item, &full_dest_path, relative_path);
+                        let relative_temp = relative_path.join(full_source_path.filename_str().unwrap());
+                        self.convert_file(item, &full_dest_path, &relative_temp);
                     } else {
                         self.convert_dir(item, &full_dest_path, relative_path);
                     }
@@ -240,7 +241,7 @@ impl Generator {
                         .replace("\\n", "")
                         .replace("\\\"", "\"");
                     let new_file_path = dest_parent_dir_path.join(format!("{}.html", file_name));
-                    let mut file = File::create(&new_file_path).ok().expect("Could not note html file");
+                    let mut file = File::create(&new_file_path).ok().expect("Could not create note html file");
                     fs::chmod(&new_file_path, USER_FILE).ok().expect("Couldn't chmod new file");
                     file.write_str(new_rendered.as_slice())
                         .ok().expect("Could not write html to file");
