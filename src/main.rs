@@ -331,7 +331,7 @@ impl Generator {
                             name: String::from_str(name),
                             url: String::from_str(format!("{}/{}", self.base_url, url.as_str().unwrap()).as_slice())
                         });
-                    } else if Generator::dir_contains_note(item) {
+                    } else if item.is_dir() && Generator::dir_contains_note(item) {
                         let name = item.filename_str().unwrap();
                         let url = relative_path.clone().join(name);
                         dirs.push(Link{
