@@ -16,20 +16,26 @@ use std::collections::BTreeMap;
 
 // Docopt usage string
 static USAGE: &'static str = "
-Usage: rust-notes <source> <dest>
+Usage: rust-notes [options] <source> <dest>
+
+Options:
+    -b, --base-url BASE     Base URL for site. Start with '/' but do not end with one. Should not include hostname.
 ";
 
-#[derive(Show, RustcDecodable)]
+
+
+#[derive(Debug, RustcDecodable)]
 struct Args {
     arg_source: String,
-    arg_dest: String
+    arg_dest: String,
+    flag_base_url: Option<String>
 }
+
 
 fn main() {
     let args: Args = Docopt::new(USAGE)
         .and_then(|d| d.decode())
         .unwrap_or_else(|e| e.exit());
-    
     //Generator(args).start();
     match Generator::new(args) {
         Ok(generator) => {
@@ -90,7 +96,6 @@ impl ToJson for NoteModel {
         Json::Object(m)
     }
 }
-
 
 fn cp_dir(source: &Path, dest: &Path) {
     fs::mkdir(dest, USER_DIR).ok().expect("Problem copying directory");
@@ -158,6 +163,13 @@ impl Generator {
             return Err("Missing partials/footer.hbs");
         }
 
+        let base_url = match args.flag_base_url {
+            Some(base_url) => {
+                Some(String::from_str(base_url.as_slice().trim_right_matches('/')))
+            },
+            None => None
+        };
+
         // Good to go! Let's return something good
 
         let dir_template_name = "dir_template";
@@ -181,7 +193,7 @@ impl Generator {
             handlebars: handlebars,
             dir_template_name: dir_template_name,
             note_template_name: note_template_name,
-            base_url: String::from_str("")
+            base_url: base_url.unwrap_or(String::from_str(""))
         })
     }
 
@@ -238,7 +250,7 @@ impl Generator {
                 Ok(rendered) => {
                     // Create File
                     let new_rendered = String::from_str(rendered.as_slice())
-                        .replace("\\n", "")
+                        .replace("\\n", "\n")
                         .replace("\\\"", "\"");
                     let new_file_path = dest_parent_dir_path.join(format!("{}.html", file_name));
                     let mut file = File::create(&new_file_path).ok().expect("Could not create note html file");
@@ -253,7 +265,7 @@ impl Generator {
 
     fn dir_contains_note(path: &Path) -> bool {
         let mut contains_note: bool = false;
-        let mut dirs = fs::walk_dir(path)
+        let dirs = fs::walk_dir(path)
             .ok().expect("Could not walk through directories recursively");
         for item2 in dirs {
             contains_note |= Generator::is_markdown_file(&item2);

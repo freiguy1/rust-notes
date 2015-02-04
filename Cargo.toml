@@ -10,4 +10,4 @@ rustc-serialize = "*"
 
 [dependencies.handlebars]
 
-path = "/home/freied/dev/rust/handlebars-rust"
+git = "https://github.com/sunng87/handlebars-rust"
