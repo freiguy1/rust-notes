@@ -6,8 +6,8 @@ use handlebars::Handlebars;
 mod markdown;
 
 enum FileType {
-    Dir(Rc<Handlebars>, String),
-    Markdown(Rc<Handlebars>, String)
+    Dir(Handlebars, String),
+    Markdown(Handlebars, String)
 }
 
 impl FileType {
@@ -49,7 +49,7 @@ impl FileType {
         handlebars.register_template_string(dir_template_name, format!("{}\n{}\n{}", header_hbs_contents, dir_hbs_contents, footer_hbs_contents))
             .ok().expect("Error registering header|dir|footer template");
 
-        result.push(FileType::Dir(Rc::new(handlebars), String::from_str(dir_template_name)));
+        result.push(FileType::Dir(handlebars, String::from_str(dir_template_name)));
 
         // Create Markdown
         let note_template_name = "note_template";
@@ -58,33 +58,29 @@ impl FileType {
         handlebars.register_template_string(note_template_name, format!("{}\n{}\n{}", header_hbs_contents, note_hbs_contents, footer_hbs_contents))
             .ok().expect("Error registering header|note|footer template");
 
-        result.push(FileType::Markdown(Rc::new(handlebars), String::from_str(note_template_name)));
+        result.push(FileType::Markdown(handlebars, String::from_str(note_template_name)));
 
         Ok(result)
     }
 
-    fn create_converter(&self, path: &Path) -> FileTypeConverter {
-            FileType::Dir(hbs, template_name) => {
-
-            },
-            FileType::Markdown(hbs, template_name) => {
-                markdown::MarkdownConverter {
-                    path: path.clone(),
-                    handlebars: hbs.clone(),
-                    template_name: template_name.clone()
+    /*
+    fn create_converter(&self, path: &Path) -> Box<FileTypeConverter> {
+            match *self {
+                FileType::Dir(ref hbs, ref template_name) => {
+                    Box::new(markdown::MarkdownConverter::new(path, hbs.clone(), template_name.as_slice()))
+                },
+                FileType::Markdown(ref hbs, ref template_name) => {
+                    Box::new(markdown::MarkdownConverter::new(path, hbs.clone(), template_name.as_slice()))
                 }
             }
     }
+    */
 
     fn is_valid_path(&self, path: &Path) -> bool {
         let name = path.as_str().expect("Could not parse file type");
         match *self {
-            FileType::Dir(_, _) if path.is_dir() => true,
-            FileType::Markdown(_, _) => path.is_file() && (
-                name.ends_with(".md") || 
-                name.ends_with(".markdown") || 
-                name.ends_with(".mkd")),
-            _ => false
+            FileType::Dir(_, _) => false,
+            FileType::Markdown(_, _) => markdown::MarkdownConverter::is_valid_path(path),
         }
     }
 
@@ -95,41 +91,38 @@ impl FileType {
         }
     }
 
-
-    /*
-    fn convert(&self, fc: &FileConverter, relative: &Path) {
-    }
-
-    fn converted_url(&self, fc: &FileConverter, relative: &Path) -> &str {
-        "hello world"
-    }
-    */
-
-}
-
-trait FileTypeConverter {
-    /// I expect source_root to be the notes directory, so relative works for both source_root and
-    /// dest_root.
     fn convert(&self,
-               source_root: &Path,
+               notes_root: &Path,
                dest_root: &Path,
                relative: &Path,
-               base_url: &str);
+               base_url: &str) {
+        match *self {
+            FileType::Dir(ref hbs, ref template_name) => {
+            },
+            FileType::Markdown(ref hbs, ref template_name) => {
+                markdown::MarkdownConverter::convert(&hbs, template_name.as_slice(), notes_root, dest_root, relative, base_url);
+            }
+        }
+    }
 
-    fn converted_url(&self, base_url: &str, relative: &Path) -> String;
 
-    fn type_str(&self) -> &str;
-
-    fn is_valid_path(path: &Path) -> bool;
+    fn converted_url(&self, base_url: &str, relative: &Path) -> String {
+        match *self {
+            FileType::Dir(ref hbs, ref template_name) => {
+                String::from_str("dir")
+            },
+            FileType::Markdown(ref hbs, ref template_name) => {
+                markdown::MarkdownConverter::converted_url(base_url, relative)
+            }
+        }
+    }
 }
-
 
 #[derive(RustcEncodable)]
 struct Link {
     name: String,
     url: String
 }
-
 
 pub fn create_parent_links(base_url: &str, path: &Path, is_dir: bool) -> Vec<Link> {
     if is_dir && path.filename().is_none() {
@@ -150,47 +143,3 @@ pub fn create_parent_links(base_url: &str, path: &Path, is_dir: bool) -> Vec<Lin
         result
     }
 }
-
-
-
-/*
-struct FileConverter<'a> {
-    source_root: Path,
-    dest_root: Path,
-    base_url: String,
-    file_types: Vec<FileType>
-}
-
-impl<'a> FileConverter<'a> {
-    fn init(source_root: &Path, dest_root: &Path, base_url: &str) -> FileConverter<'a> {
-        let dir_ft = FileType::Dir(String::from_str("first string"));
-        let markdown_ft = FileType::Markdown(String::from_str("second string"));
-        FileConverter {
-            source_root: source_root.clone(),
-            dest_root: dest_root.clone(),
-            base_url: String::from_str(base_url),
-            file_types: vec![dir_ft, markdown_ft]
-        }
-    }
-
-    pub fn convert(&self, relative: &Path) {
-        match self.file_type_by_path(relative) {
-            Some(ft) => {
-                // Valid file, can process
-                println!("Can process file: {:?}", relative);
-            },
-            None => println!("Cannot process file, unknown type: {:?}", relative)
-        }
-    }
-
-    fn converted_url(&self, relative: &Path) -> Option<&str> {
-        self.file_type_by_path(relative).map(|ft| ft.converted_url(&self, relative))
-    }
-
-    fn file_type_by_path(&self, relative: &Path) -> Option<&FileType> {
-        self.file_types.iter().find(|ft| ft.is_valid_path(relative))
-    }
-}
-
-
-*/
