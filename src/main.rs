@@ -249,13 +249,10 @@ impl Generator {
             match self.handlebars.render(self.note_template_name, &model) {
                 Ok(rendered) => {
                     // Create File
-                    let new_rendered = String::from_str(rendered.as_slice())
-                        .replace("\\n", "\n")
-                        .replace("\\\"", "\"");
                     let new_file_path = dest_parent_dir_path.join(format!("{}.html", file_name));
                     let mut file = File::create(&new_file_path).ok().expect("Could not create note html file");
                     fs::chmod(&new_file_path, USER_FILE).ok().expect("Couldn't chmod new file");
-                    file.write_str(new_rendered.as_slice())
+                    file.write_str(rendered.as_slice())
                         .ok().expect("Could not write html to file");
                 },
                 Err(why) => panic!("Error rendering note: {:?}", why)
