@@ -14,6 +14,9 @@ use handlebars::Handlebars;
 use rustc_serialize::json::{ ToJson, Json };
 use std::collections::BTreeMap;
 
+
+mod file_converter;
+
 // Docopt usage string
 static USAGE: &'static str = "
 Usage: rust-notes [options] <source> <dest>

@@ -7,7 +7,5 @@ authors = ["Ethan Frei <ethan.frei@gmail.com>"]
 [dependencies]
 docopt = "*"
 rustc-serialize = "*"
+handlebars = "*"
 
-[dependencies.handlebars]
-
-git = "https://github.com/sunng87/handlebars-rust"

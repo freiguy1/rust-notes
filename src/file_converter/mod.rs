@@ -1,18 +1,81 @@
 use std::old_io::fs::PathExtensions;
 use std::rc::Rc;
+use std::old_io::File;
+use handlebars::Handlebars;
+
+mod markdown;
 
 enum FileType {
-    Dir(String),
-    Markdown(String)
+    Dir(Handlebars, String),
+    Markdown(Handlebars, String)
 }
 
 impl FileType {
 
+    fn register(source_root: &Path) -> Result<Vec<FileType>, &'static str> {
+        // Validate generic stuff
+        let header_hbs_path = source_root.clone().join("partials/header.hbs");
+        if !header_hbs_path.exists() {
+            return Err("Missing partials/header.hbs");
+        }
+
+        let footer_hbs_path = source_root.clone().join("partials/footer.hbs");
+        if !footer_hbs_path.exists() {
+            return Err("Missing partials/footer.hbs");
+        }
+
+        // Validate Dir
+        let dir_hbs_path = source_root.clone().join("layouts/dir.hbs");
+        if !dir_hbs_path.exists() {
+            return Err("Missing /layouts/dir.hbs");
+        }
+
+        // Validate Markdown
+        let note_hbs_path = source_root.clone().join("layouts/note.hbs");
+        if !note_hbs_path.exists() {
+            return Err("Missing /layouts/note.hbs");
+        }
+
+        // Grab generic stuff
+        let header_hbs_contents = File::open(&header_hbs_path).read_to_string().unwrap();
+        let footer_hbs_contents = File::open(&footer_hbs_path).read_to_string().unwrap();
+
+        let mut result: Vec<FileType> = Vec::new();
+
+        // Create Dir
+        let dir_template_name = "dir_template";
+        let dir_hbs_contents = File::open(&dir_hbs_path).read_to_string().unwrap();
+        let mut handlebars = Handlebars::new();
+        handlebars.register_template_string(dir_template_name, format!("{}\n{}\n{}", header_hbs_contents, dir_hbs_contents, footer_hbs_contents))
+            .ok().expect("Error registering header|dir|footer template");
+
+        result.push(FileType::Dir(handlebars, String::from_str(dir_template_name)));
+
+        // Create Markdown
+        let note_template_name = "note_template";
+        let note_hbs_contents = File::open(&note_hbs_path).read_to_string().unwrap();
+        let mut handlebars = Handlebars::new();
+        handlebars.register_template_string(note_template_name, format!("{}\n{}\n{}", header_hbs_contents, note_hbs_contents, footer_hbs_contents))
+            .ok().expect("Error registering header|note|footer template");
+
+        result.push(FileType::Markdown(handlebars, String::from_str(note_template_name)));
+
+        Ok(result)
+    }
+
+    fn create_converter(&self, path: &Path) -> FileTypeConverter {
+            FileType::Dir(hbs, template_name) => {
+
+            },
+            FileType::Markdown(hbs, template_name) => {
+            }
+    }
+
     fn is_valid_path(&self, path: &Path) -> bool {
         let name = path.as_str().expect("Could not parse file type");
         match *self {
-            FileType::Dir(_) if path.is_dir() => true,
-            FileType::Markdown(_) => path.is_file() && (
+            FileType::Dir(_, _) if path.is_dir() => true,
+            FileType::Markdown(_, _) => path.is_file() && (
                 name.ends_with(".md") || 
                 name.ends_with(".markdown") || 
                 name.ends_with(".mkd")),
@@ -22,17 +85,20 @@ impl FileType {
 
     fn type_str(&self) -> &'static str {        
         match *self {
-            FileType::Dir(_) => "dir",
-            FileType::Markdown(_) => "markdown"
+            FileType::Dir(_, _) => "dir",
+            FileType::Markdown(_, _) => "markdown"
         }
     }
 
+
+    /*
     fn convert(&self, fc: &FileConverter, relative: &Path) {
     }
 
     fn converted_url(&self, fc: &FileConverter, relative: &Path) -> &str {
         "hello world"
     }
+    */
 
 }
 
@@ -45,53 +111,34 @@ trait FileTypeConverter {
                relative: &Path,
                base_url: &str);
 
-    fn converted_url(&self, base_url: &str, relative: &Path) -> &str;
+    fn converted_url(&self, base_url: &str, relative: &Path) -> String;
 
     fn type_str(&self) -> &str;
 
     fn is_valid_path(path: &Path) -> bool;
 }
 
-struct MarkdownConverter {
-    path: Path,
-    handlebars: Rc<String>
-}
 
-impl MarkdownConverter {
-    fn new(path: &Path, handlebars: Rc<String>) -> MarkdownConverter {
-        MarkdownConverter {
-            path: path.clone(),
-            handlebars: handlebars
-        }
-    }
-}
-
+#[derive(RustcEncodable)]
 struct Link {
     name: String,
     url: String
 }
 
 
-pub fn create_parent_links(&self, path: &Path, is_note: bool) -> Vec<Link> {
-
-    
-    mut result = if path.is_dir() {
-        Vec::new<Link>()
-
-    }
-
-    if !is_note && path.filename().is_none() {
+pub fn create_parent_links(base_url: &str, path: &Path, is_dir: bool) -> Vec<Link> {
+    if is_dir && path.filename().is_none() {
         Vec::new()
     } else {
         let mut result: Vec<Link> = vec![Link {
             name: String::from_str("root"),
-            url: format!("{}/", self.base_url)
+            url: format!("{}", base_url)
         }];
         let mut temp = path.clone().dir_path();
         while temp.filename().is_some() {
             result.insert(1, Link {
                 name: String::from_str(temp.filename_str().unwrap()),
-                url: format!("{}/{}", self.base_url, temp.as_str().unwrap())
+                url: format!("{}{}", base_url, temp.as_str().unwrap())
             });
             temp.pop();
         }
@@ -100,89 +147,6 @@ pub fn create_parent_links(&self, path: &Path, is_note: bool) -> Vec<Link> {
 }
 
 
-struct MarkdownModel {
-    name: String,
-    parents: Vec<Link>,
-    content: String,
-    base_url: String
-}
-
-impl FileTypeConverter for MarkdownConverter {
-    fn convert(&self,
-               source_root: &Path,
-               dest_root: &Path,
-               relative: &Path,
-               base_url: &str) {
-    /*
-    fn convert_file(&self, source_file_path: &Path, dest_parent_dir_path: &Path, relative_path: &Path) {
-        if Generator::is_markdown_file(source_file_path) {
-            let source_contents = File::open(source_file_path).read_to_string().unwrap();
-            let file_name = source_file_path.filestem_str().unwrap();
-
-            // Create Model
-            let content = Markdown(source_contents.as_slice());
-            let parents = self.get_parent_links(relative_path, true);
-
-            let model = NoteModel {
-                name: String::from_str(file_name),
-                parents : parents,
-                content : format!("{}", content),
-                base_url: self.base_url.clone()
-            };
-
-            match self.handlebars.render(self.note_template_name, &model) {
-                Ok(rendered) => {
-                    // Create File
-                    let new_rendered = String::from_str(rendered.as_slice())
-                        .replace("\\n", "\n")
-                        .replace("\\\"", "\"");
-                    let new_file_path = dest_parent_dir_path.join(format!("{}.html", file_name));
-                    let mut file = File::create(&new_file_path).ok().expect("Could not create note html file");
-                    fs::chmod(&new_file_path, USER_FILE).ok().expect("Couldn't chmod new file");
-                    file.write_str(new_rendered.as_slice())
-                        .ok().expect("Could not write html to file");
-                },
-                Err(why) => panic!("Error rendering note: {:?}", why)
-            }
-        }
-    }
-    */
-        let source_file = source_root.clone().join(relative);
-        let dest_file = dest_root.clone().join(relative);
-        let file_name = relative.filestem_str().unwrap();
-        let source_contents = File::open(source_file).read_to_string().unwrap();
-        // Create Model
-        let content = Markdown(source_contents.as_slice());
-        let parents = self.get_parent_links(relative_path, true);
-
-        let model = MarkdownModel {
-            name: String::from_str(file_name),
-            parents : parents,
-            content : format!("{}", content),
-            base_url: base_url.clone()
-        };
-        match self.handlebars.render(self.note_template_name, &model) {
-            Ok(rendered) => {
-                // Create File
-                let new_rendered = String::from_str(rendered.as_slice())
-                    .replace("\\n", "\n")
-                    .replace("\\\"", "\"");
-                let new_file_path = dest_parent_dir_path.join(format!("{}.html", file_name));
-                let mut file = File::create(&dest_file.dirname_str().unwrap()).ok().expect("Could not create markdown html file");
-                fs::chmod(&new_file_path, USER_FILE).ok().expect("Couldn't chmod new file");
-                file.write_str(new_rendered.as_slice())
-                    .ok().expect("Could not write html to file");
-            },
-            Err(why) => panic!("Error rendering markdown: {:?}", why)
-        }
-    }
-
-    fn converted_url(&self, base_url: &str, relative: &Path) -> &str;
-
-    fn type_str(&self) -> &str;
-
-    fn is_valid_path(path: &Path) -> bool;
-}
 
 /*
 struct FileConverter<'a> {
