@@ -28,68 +28,83 @@ impl ToJson for MarkdownModel {
     }
 }
 
+pub fn create_handlebars(source_root: &Path) -> Result<Handlebars, &'static str> {
+    let header_hbs_path = source_root.clone().join("partials/header.hbs");
+    if !header_hbs_path.exists() {
+        return Err("Missing partials/header.hbs");
+    }
 
-pub struct MarkdownConverter {
-    path: Path,
-    handlebars: Rc<Handlebars>,
-    template_name: String
+    let footer_hbs_path = source_root.clone().join("partials/footer.hbs");
+    if !footer_hbs_path.exists() {
+        return Err("Missing partials/footer.hbs");
+    }
+
+    let note_hbs_path = source_root.clone().join("layouts/note.hbs");
+    if !note_hbs_path.exists() {
+        return Err("Missing /layouts/note.hbs");
+    }
+
+    let header_hbs_contents = File::open(&header_hbs_path).read_to_string().unwrap();
+    let footer_hbs_contents = File::open(&footer_hbs_path).read_to_string().unwrap();
+    let note_hbs_contents = File::open(&note_hbs_path).read_to_string().unwrap();
+    let mut handlebars = Handlebars::new();
+    handlebars.register_template_string(type_str(), format!("{}\n{}\n{}", header_hbs_contents, note_hbs_contents, footer_hbs_contents))
+        .ok().expect("Error registering header|note|footer template");
+
+    Ok(handlebars)
+
 }
 
-impl MarkdownConverter {
-    pub fn new(path: &Path, handlebars: Rc<Handlebars>, template_name: &str) -> MarkdownConverter {
-        MarkdownConverter {
-            path: path.clone(),
-            handlebars: handlebars,
-            template_name: String::from_str(template_name)
-        }
-    }
+pub fn is_valid_path(path: &Path) -> bool {
+    let name = path.filename_str().unwrap();
+    path.is_file() && (
+        name.ends_with(".md") || 
+        name.ends_with(".markdown") || 
+        name.ends_with(".mkd"))
+}
 
-    pub fn is_valid_path(path: &Path) -> bool {
-        let name = path.filename_str().unwrap();
-        path.is_file() && (
-            name.ends_with(".md") || 
-            name.ends_with(".markdown") || 
-            name.ends_with(".mkd"))
-    }
+pub fn convert(handlebars: &Handlebars,
+           template_name: &str,
+           notes_root: &Path,
+           dest_root: &Path,
+           relative: &Path,
+           base_url: &str) {
+    let file_name = relative.filestem_str().unwrap();
+    let source_file = notes_root.clone().join(relative);
+    let dest_file = dest_root.clone().join(relative.dirname_str().unwrap()).join(format!("{}.html", file_name));
+    let source_contents = File::open(&source_file).read_to_string().unwrap();
+    // Create Model
+    let content = Markdown(source_contents.as_slice());
+    let parents = create_parent_links(base_url, relative, false);
 
-    pub fn convert(handlebars: &Handlebars,
-               template_name: &str,
-               notes_root: &Path,
-               dest_root: &Path,
-               relative: &Path,
-               base_url: &str) {
-        let file_name = relative.filestem_str().unwrap();
-        let source_file = notes_root.clone().join(relative);
-        let dest_file = dest_root.clone().join(relative.dirname_str().unwrap()).join(format!("{}.html", file_name));
-        let source_contents = File::open(&source_file).read_to_string().unwrap();
-        // Create Model
-        let content = Markdown(source_contents.as_slice());
-        let parents = create_parent_links(base_url, relative, false);
-
-        let model = MarkdownModel {
-            name: String::from_str(file_name),
-            parents : parents,
-            content : format!("{}", content),
-            base_url: String::from_str(base_url)
-        };
-        match handlebars.render(template_name, &model) {
-            Ok(rendered) => {
-                // Create File
-                let mut file = File::create(&dest_file).ok().expect("Could not create markdown html file");
-                fs::chmod(&dest_file, USER_FILE).ok().expect("Couldn't chmod new file");
-                file.write_str(rendered.as_slice())
-                    .ok().expect("Could not write html to file");
-            },
-            Err(why) => panic!("Error rendering markdown: {:?}", why)
-        }
+    let model = MarkdownModel {
+        name: String::from_str(file_name),
+        parents : parents,
+        content : format!("{}", content),
+        base_url: String::from_str(base_url)
+    };
+    match handlebars.render(template_name, &model) {
+        Ok(rendered) => {
+            // Create File
+            let mut file = File::create(&dest_file).ok().expect("Could not create markdown html file");
+            fs::chmod(&dest_file, USER_FILE).ok().expect("Couldn't chmod new file");
+            file.write_str(rendered.as_slice())
+                .ok().expect("Could not write html to file");
+        },
+        Err(why) => panic!("Error rendering markdown: {:?}", why)
     }
+}
 
-    pub fn converted_url(base_url: &str, relative: &Path) -> String {
-        let file_name = relative.filestem_str().unwrap();
-        format!("{}{}{}", base_url, relative.dirname_str().unwrap(), format!("{}.html", file_name))
-    }
+pub fn converted_url(base_url: &str, relative: &Path) -> String {
+    let file_name = relative.filestem_str().unwrap();
+    let parent_relative = if relative.dirname_str().unwrap() == "." { 
+        String::from_str("") 
+    } else {
+        format!("{}/", relative.dirname_str().unwrap())
+    };
+    format!("{}{}{}", base_url, parent_relative, format!("{}.html", file_name))
+}
 
-    pub fn type_str() -> &'static str {
-        "markdown"
-    }
+pub fn type_str() -> &'static str {
+    "markdown"
 }

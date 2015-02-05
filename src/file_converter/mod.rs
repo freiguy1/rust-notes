@@ -5,14 +5,14 @@ use handlebars::Handlebars;
 
 mod markdown;
 
-enum FileType {
+pub enum FileType {
     Dir(Handlebars, String),
     Markdown(Handlebars, String)
 }
 
 impl FileType {
 
-    fn register(source_root: &Path) -> Result<Vec<FileType>, &'static str> {
+    pub fn register(source_root: &Path) -> Result<Vec<FileType>, &'static str> {
         // Validate generic stuff
         let header_hbs_path = source_root.clone().join("partials/header.hbs");
         if !header_hbs_path.exists() {
@@ -30,12 +30,6 @@ impl FileType {
             return Err("Missing /layouts/dir.hbs");
         }
 
-        // Validate Markdown
-        let note_hbs_path = source_root.clone().join("layouts/note.hbs");
-        if !note_hbs_path.exists() {
-            return Err("Missing /layouts/note.hbs");
-        }
-
         // Grab generic stuff
         let header_hbs_contents = File::open(&header_hbs_path).read_to_string().unwrap();
         let footer_hbs_contents = File::open(&footer_hbs_path).read_to_string().unwrap();
@@ -51,47 +45,25 @@ impl FileType {
 
         result.push(FileType::Dir(handlebars, String::from_str(dir_template_name)));
 
-        // Create Markdown
-        let note_template_name = "note_template";
-        let note_hbs_contents = File::open(&note_hbs_path).read_to_string().unwrap();
-        let mut handlebars = Handlebars::new();
-        handlebars.register_template_string(note_template_name, format!("{}\n{}\n{}", header_hbs_contents, note_hbs_contents, footer_hbs_contents))
-            .ok().expect("Error registering header|note|footer template");
-
-        result.push(FileType::Markdown(handlebars, String::from_str(note_template_name)));
+        result.push(
+            FileType::Markdown(
+                try!(markdown::create_handlebars(source_root)),
+                String::from_str(markdown::type_str())
+            )
+        );
 
         Ok(result)
     }
 
-    /*
-    fn create_converter(&self, path: &Path) -> Box<FileTypeConverter> {
-            match *self {
-                FileType::Dir(ref hbs, ref template_name) => {
-                    Box::new(markdown::MarkdownConverter::new(path, hbs.clone(), template_name.as_slice()))
-                },
-                FileType::Markdown(ref hbs, ref template_name) => {
-                    Box::new(markdown::MarkdownConverter::new(path, hbs.clone(), template_name.as_slice()))
-                }
-            }
-    }
-    */
-
-    fn is_valid_path(&self, path: &Path) -> bool {
+    pub fn is_valid_path(&self, path: &Path) -> bool {
         let name = path.as_str().expect("Could not parse file type");
         match *self {
             FileType::Dir(_, _) => false,
-            FileType::Markdown(_, _) => markdown::MarkdownConverter::is_valid_path(path),
+            FileType::Markdown(_, _) => markdown::is_valid_path(path),
         }
     }
 
-    fn type_str(&self) -> &'static str {        
-        match *self {
-            FileType::Dir(_, _) => "dir",
-            FileType::Markdown(_, _) => "markdown"
-        }
-    }
-
-    fn convert(&self,
+    pub fn convert(&self,
                notes_root: &Path,
                dest_root: &Path,
                relative: &Path,
@@ -100,21 +72,28 @@ impl FileType {
             FileType::Dir(ref hbs, ref template_name) => {
             },
             FileType::Markdown(ref hbs, ref template_name) => {
-                markdown::MarkdownConverter::convert(&hbs, template_name.as_slice(), notes_root, dest_root, relative, base_url);
+                markdown::convert(&hbs, template_name.as_slice(), notes_root, dest_root, relative, base_url);
             }
         }
     }
 
 
-    fn converted_url(&self, base_url: &str, relative: &Path) -> String {
+    pub fn converted_url(&self, base_url: &str, relative: &Path) -> String {
         match *self {
             FileType::Dir(ref hbs, ref template_name) => {
                 String::from_str("dir")
             },
             FileType::Markdown(ref hbs, ref template_name) => {
-                markdown::MarkdownConverter::converted_url(base_url, relative)
+                markdown::converted_url(base_url, relative)
             }
         }
+    }
+}
+
+pub fn type_str_by_path(path: &Path) -> &'static str {
+    match path {
+        p if markdown::is_valid_path(p) => markdown::type_str(),
+        _ => "unknown"
     }
 }
 
@@ -143,3 +122,5 @@ pub fn create_parent_links(base_url: &str, path: &Path, is_dir: bool) -> Vec<Lin
         result
     }
 }
+
+

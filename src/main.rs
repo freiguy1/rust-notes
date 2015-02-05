@@ -46,6 +46,7 @@ fn main() {
         },
         Err(message) => panic!(message)
     }
+
 }
 
 struct Link {
@@ -120,10 +121,27 @@ struct Generator {
     handlebars: Handlebars,
     dir_template_name: &'static str,
     note_template_name: &'static str,
-    base_url: String
+    base_url: String,
+    registered_filetypes: Vec<file_converter::FileType>
 }
 
 impl Generator {
+
+    fn convert(&self, relative: &Path) {
+        match self.registered_filetypes.iter().find(|ft| ft.is_valid_path(&self.notes_source_path.clone().join(relative.as_str().unwrap()))) {
+            Some(ft) => {
+                println!("{}", ft.converted_url("/", &relative));
+                ft.convert(&self.notes_source_path,
+                           &self.root_dest_path,
+                           &relative,
+                           self.base_url.as_slice());
+            },
+            None => {
+            }
+        }
+
+
+    }
 
     pub fn new(args: Args) -> Result<Generator, &'static str> {
         let source_path = Path::new(args.arg_source.as_slice());
@@ -167,8 +185,11 @@ impl Generator {
         }
 
         let base_url = match args.flag_base_url {
+            Some(ref base_url) if base_url.is_empty() => None,
             Some(base_url) => {
-                Some(String::from_str(base_url.as_slice().trim_right_matches('/')))
+                let mut result = String::from_str(base_url.trim_matches('/'));
+                result = format!("/{}/", result);
+                Some(result)
             },
             None => None
         };
@@ -188,6 +209,8 @@ impl Generator {
             .ok().expect("Error registering header|dir|footer template");
         handlebars.register_template_string(note_template_name, format!("{}\n{}\n{}", header_hbs_contents, note_hbs_contents, footer_hbs_contents))
             .ok().expect("Error registering header|note|footer template");
+
+        let registered_filetypes = file_converter::FileType::register(&source_path).ok().unwrap();
         
         Ok(Generator{
             root_source_path: source_path,
@@ -196,7 +219,8 @@ impl Generator {
             handlebars: handlebars,
             dir_template_name: dir_template_name,
             note_template_name: note_template_name,
-            base_url: base_url.unwrap_or(String::from_str(""))
+            base_url: base_url.unwrap_or(String::from_str("/")),
+            registered_filetypes: registered_filetypes
         })
     }
 
@@ -222,8 +246,12 @@ impl Generator {
             Ok(items) => {
                 for item in items.iter() {
                     if item.is_file() {
-                        let relative_temp = relative_path.join(full_source_path.filename_str().unwrap());
-                        self.convert_file(item, &full_dest_path, &relative_temp);
+                        let relative_temp = relative_path
+                            .clone()
+                            .join(item.filename_str().unwrap());
+                        self.convert(&relative_temp);
+                        //let relative_temp = relative_path.join(full_source_path.filename_str().unwrap());
+                        //self.convert_file(item, &full_dest_path, &relative_temp);
                     } else {
                         self.convert_dir(item, &full_dest_path, relative_path);
                     }
@@ -301,13 +329,13 @@ impl Generator {
         } else {
             let mut result: Vec<Link> = vec![Link {
                 name: String::from_str("root"),
-                url: format!("{}/", self.base_url)
+                url: format!("{}", self.base_url)
             }];
             let mut temp = path.clone().dir_path();
             while temp.filename().is_some() {
                 result.insert(1, Link {
                     name: String::from_str(temp.filename_str().unwrap()),
-                    url: format!("{}/{}", self.base_url, temp.as_str().unwrap())
+                    url: format!("{}{}", self.base_url, temp.as_str().unwrap())
                 });
                 temp.pop();
             }
@@ -341,14 +369,14 @@ impl Generator {
                         let url = relative_path.clone().join(format!("{}.html", name).as_slice());
                         notes.push(Link{
                             name: String::from_str(name),
-                            url: String::from_str(format!("{}/{}", self.base_url, url.as_str().unwrap()).as_slice())
+                            url: String::from_str(format!("{}{}", self.base_url, url.as_str().unwrap()).as_slice())
                         });
                     } else if item.is_dir() && Generator::dir_contains_note(item) {
                         let name = item.filename_str().unwrap();
                         let url = relative_path.clone().join(name);
                         dirs.push(Link{
                             name: String::from_str(name),
-                            url: String::from_str(format!("{}/{}", self.base_url, url.as_str().unwrap()).as_slice())
+                            url: String::from_str(format!("{}{}", self.base_url, url.as_str().unwrap()).as_slice())
                         });
                     }
                 }
