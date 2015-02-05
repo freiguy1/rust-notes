@@ -6,8 +6,8 @@ use handlebars::Handlebars;
 mod markdown;
 
 enum FileType {
-    Dir(Handlebars, String),
-    Markdown(Handlebars, String)
+    Dir(Rc<Handlebars>, String),
+    Markdown(Rc<Handlebars>, String)
 }
 
 impl FileType {
@@ -49,7 +49,7 @@ impl FileType {
         handlebars.register_template_string(dir_template_name, format!("{}\n{}\n{}", header_hbs_contents, dir_hbs_contents, footer_hbs_contents))
             .ok().expect("Error registering header|dir|footer template");
 
-        result.push(FileType::Dir(handlebars, String::from_str(dir_template_name)));
+        result.push(FileType::Dir(Rc::new(handlebars), String::from_str(dir_template_name)));
 
         // Create Markdown
         let note_template_name = "note_template";
@@ -58,7 +58,7 @@ impl FileType {
         handlebars.register_template_string(note_template_name, format!("{}\n{}\n{}", header_hbs_contents, note_hbs_contents, footer_hbs_contents))
             .ok().expect("Error registering header|note|footer template");
 
-        result.push(FileType::Markdown(handlebars, String::from_str(note_template_name)));
+        result.push(FileType::Markdown(Rc::new(handlebars), String::from_str(note_template_name)));
 
         Ok(result)
     }
@@ -68,6 +68,11 @@ impl FileType {
 
             },
             FileType::Markdown(hbs, template_name) => {
+                markdown::MarkdownConverter {
+                    path: path.clone(),
+                    handlebars: hbs.clone(),
+                    template_name: template_name.clone()
+                }
             }
     }
 
