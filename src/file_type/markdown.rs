@@ -10,7 +10,7 @@ use rustdoc::html::markdown::Markdown;
 
 use handlebars::Handlebars;
 
-use ::file_converter::{ create_parent_links, Link };
+use ::file_type::{ create_parent_links, Link };
 
 
 #[derive(RustcEncodable)]

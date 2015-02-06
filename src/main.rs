@@ -12,7 +12,7 @@ use std::old_io::USER_DIR;
 use handlebars::Handlebars;
 
 
-mod file_converter;
+mod file_type;
 
 // Docopt usage string
 static USAGE: &'static str = "
@@ -74,7 +74,7 @@ struct Generator {
 impl Generator {
 
     fn convert(&self, path: &Path) {
-        match file_converter::FileType::new(path) {
+        match file_type::FileType::new(path) {
             Some(ft) => ft.convert(&self.context),
             None => { println!("Couldn't handle file: {:?}", path); }
         }
@@ -111,7 +111,7 @@ impl Generator {
             None => None
         };
 
-        let handlebars = try!(file_converter::FileType::register_handlebars(&source_path));
+        let handlebars = try!(file_type::FileType::register_handlebars(&source_path));
 
         // Good to go! Let's return something good
 

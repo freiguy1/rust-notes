@@ -8,7 +8,7 @@ use rustc_serialize::json::{ ToJson, Json };
 
 use handlebars::Handlebars;
 
-use ::file_converter::{ create_parent_links, Link };
+use ::file_type::{ create_parent_links, Link };
 
 pub fn register_handlebars(source_root: &Path, handlebars: &mut Handlebars) -> Result<(), &'static str> {
     // Validate generic stuff
@@ -116,7 +116,7 @@ fn get_children(context: &::AppContext, path: &Path) -> Vec<Child> {
         match fs::readdir(&path) {
             Ok(items) => {
                 for item in items.iter() {
-                    let child_opt = ::file_converter::FileType::new(item)
+                    let child_opt = ::file_type::FileType::new(item)
                         .map(|ft| Child {
                             name: String::from_str(item.filestem_str().unwrap()),
                             url: ft.get_url(context),
