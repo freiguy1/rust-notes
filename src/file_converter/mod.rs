@@ -1,6 +1,3 @@
-use std::old_io::fs::PathExtensions;
-use std::rc::Rc;
-use std::old_io::File;
 use handlebars::Handlebars;
 
 mod markdown;
@@ -16,7 +13,7 @@ impl FileType {
     pub fn new(path: &Path) -> Option<FileType> {
         match path {
             p if markdown::is_valid_path(p) => Some(FileType::Markdown(p.clone())),
-            p if p.is_dir() => Some(FileType::Dir(p.clone())),
+            p if dir::is_valid_path(p) => Some(FileType::Dir(p.clone())),
             _ => None
         }
     }

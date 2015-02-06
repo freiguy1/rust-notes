@@ -1,7 +1,7 @@
 
 use std::old_io::fs;
 use std::old_io::fs::PathExtensions;
-use std::old_io::{ FileType, File, USER_DIR, USER_FILE };
+use std::old_io::{ File, USER_FILE };
 
 use rustc_serialize::json;
 use rustc_serialize::json::{ ToJson, Json };
@@ -9,8 +9,6 @@ use rustc_serialize::json::{ ToJson, Json };
 use rustdoc::html::markdown::Markdown;
 
 use handlebars::Handlebars;
-
-use std::rc::Rc;
 
 use ::file_converter::{ create_parent_links, Link };
 
