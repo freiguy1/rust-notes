@@ -1,4 +1,5 @@
 
+use std::cmp::Ordering;
 use std::old_io::fs;
 use std::old_io::fs::PathExtensions;
 use std::old_io::{ File, USER_DIR, USER_FILE };
@@ -127,6 +128,16 @@ fn get_children(context: &::AppContext, path: &Path) -> Vec<Child> {
             },
             Err(_) => ()
         }
+
+    result.as_mut_slice().sort_by(|a, b| {
+        if a.file_type == String::from_str(type_str()) && b.file_type != String::from_str(type_str()) {
+            Ordering::Less
+        } else {
+            a.file_type.cmp(&b.file_type)
+        }
+
+    });
+
     result
 }
 
