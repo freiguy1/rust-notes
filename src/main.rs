@@ -78,7 +78,7 @@ impl ToJson for DirModel {
         m.insert("parents".to_string(), self.parents.to_json());
         m.insert("dirs".to_string(), self.dirs.to_json());
         m.insert("notes".to_string(), self.notes.to_json());
-        m.insert("baseUrl".to_string(), self.base_url.to_json());
+        m.insert("base_url".to_string(), self.base_url.to_json());
         Json::Object(m)
     }
 }
@@ -96,7 +96,7 @@ impl ToJson for NoteModel {
         m.insert("name".to_string(), self.name.to_json());
         m.insert("parents".to_string(), self.parents.to_json());
         m.insert("content".to_string(), self.content.to_json());
-        m.insert("baseUrl".to_string(), self.base_url.to_json());
+        m.insert("base_url".to_string(), self.base_url.to_json());
         Json::Object(m)
     }
 }
@@ -114,33 +114,31 @@ fn cp_dir(source: &Path, dest: &Path) {
     }
 }
 
+struct AppContext {
+    root_source: Path,
+    root_dest: Path,
+    root_notes: Path, 
+    handlebars: Handlebars,
+    base_url: String,
+}
+
 struct Generator {
     root_source_path: Path,
     root_dest_path: Path,
     notes_source_path: Path, 
-    handlebars: Handlebars,
     dir_template_name: &'static str,
     note_template_name: &'static str,
     base_url: String,
-    registered_filetypes: Vec<file_converter::FileType>
+    context: AppContext
 }
 
 impl Generator {
 
-    fn convert(&self, relative: &Path) {
-        match self.registered_filetypes.iter().find(|ft| ft.is_valid_path(&self.notes_source_path.clone().join(relative.as_str().unwrap()))) {
-            Some(ft) => {
-                println!("{}", ft.converted_url("/", &relative));
-                ft.convert(&self.notes_source_path,
-                           &self.root_dest_path,
-                           &relative,
-                           self.base_url.as_slice());
-            },
-            None => {
-            }
+    fn convert(&self, path: &Path) {
+        match file_converter::FileType::new(path) {
+            Some(ft) => ft.convert(&self.context),
+            None => { println!("Couldn't handle file: {:?}", path); }
         }
-
-
     }
 
     pub fn new(args: Args) -> Result<Generator, &'static str> {
@@ -196,8 +194,8 @@ impl Generator {
 
         // Good to go! Let's return something good
 
-        let dir_template_name = "dir_template";
-        let note_template_name = "note_template";
+        let dir_template_name = "dir";
+        let note_template_name = "markdown";
 
         let dir_hbs_contents = File::open(&dir_hbs_path).read_to_string().unwrap();
         let note_hbs_contents = File::open(&note_hbs_path).read_to_string().unwrap();
@@ -210,17 +208,24 @@ impl Generator {
         handlebars.register_template_string(note_template_name, format!("{}\n{}\n{}", header_hbs_contents, note_hbs_contents, footer_hbs_contents))
             .ok().expect("Error registering header|note|footer template");
 
-        let registered_filetypes = file_converter::FileType::register(&source_path).ok().unwrap();
+        //let registered_filetypes = file_converter::FileType::register(&source_path).ok().unwrap();
+
+        let context = AppContext {
+            root_source: source_path.clone(),
+            root_dest: dest_path.clone(),
+            root_notes: notes_source_path.clone(),
+            handlebars: handlebars,
+            base_url: base_url.clone().unwrap_or(String::from_str("/"))
+        };
         
         Ok(Generator{
             root_source_path: source_path,
             root_dest_path: dest_path,
             notes_source_path: notes_source_path,
-            handlebars: handlebars,
             dir_template_name: dir_template_name,
             note_template_name: note_template_name,
             base_url: base_url.unwrap_or(String::from_str("/")),
-            registered_filetypes: registered_filetypes
+            context: context
         })
     }
 
@@ -249,7 +254,8 @@ impl Generator {
                         let relative_temp = relative_path
                             .clone()
                             .join(item.filename_str().unwrap());
-                        self.convert(&relative_temp);
+                        //self.convert(&relative_temp);
+                        self.convert(&item);
                         //let relative_temp = relative_path.join(full_source_path.filename_str().unwrap());
                         //self.convert_file(item, &full_dest_path, &relative_temp);
                     } else {
@@ -277,7 +283,7 @@ impl Generator {
                 base_url: self.base_url.clone()
             };
 
-            match self.handlebars.render(self.note_template_name, &model) {
+            match self.context.handlebars.render(self.note_template_name, &model) {
                 Ok(rendered) => {
                     // Create File
                     let new_file_path = dest_parent_dir_path.join(format!("{}.html", file_name));
@@ -392,7 +398,7 @@ impl Generator {
             base_url: self.base_url.clone()
         };
         
-        match self.handlebars.render(self.dir_template_name, &model) {
+        match self.context.handlebars.render(self.dir_template_name, &model) {
             Ok(rendered) => {
                 file.write_str(rendered.as_slice())
                     .ok().expect("Could not write html to file");

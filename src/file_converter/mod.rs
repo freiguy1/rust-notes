@@ -6,12 +6,42 @@ use handlebars::Handlebars;
 mod markdown;
 
 pub enum FileType {
-    Dir(Handlebars, String),
-    Markdown(Handlebars, String)
+    Dir(Path),
+    Markdown(Path)
 }
 
 impl FileType {
 
+    pub fn new(path: &Path) -> Option<FileType> {
+        match path {
+            p if markdown::is_valid_path(p) => Some(FileType::Markdown(p.clone())),
+            p if p.is_dir() => Some(FileType::Dir(p.clone())),
+            _ => None
+        }
+    }
+
+    fn get_url(&self, context: &::AppContext) -> String {
+        match *self {
+            FileType::Dir(ref p) => String::from_str("/some/dir/"),
+            FileType::Markdown(ref p) => markdown::get_url(context, &p)
+        }
+    }
+
+    fn get_type_str(&self) -> &'static str {
+        match *self {
+            FileType::Dir(_) => "dir",
+            FileType::Markdown(_) => markdown::type_str()
+        }
+    }
+
+    pub fn convert(&self, context: &::AppContext) {
+        match *self {
+            FileType::Dir(_) => {},
+            FileType::Markdown(ref p) => markdown::convert(context, &p)
+        }
+    }
+
+/*
     pub fn register(source_root: &Path) -> Result<Vec<FileType>, &'static str> {
         // Validate generic stuff
         let header_hbs_path = source_root.clone().join("partials/header.hbs");
@@ -88,6 +118,7 @@ impl FileType {
             }
         }
     }
+*/
 }
 
 pub fn type_str_by_path(path: &Path) -> &'static str {

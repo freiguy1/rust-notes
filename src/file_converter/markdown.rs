@@ -63,27 +63,22 @@ pub fn is_valid_path(path: &Path) -> bool {
         name.ends_with(".mkd"))
 }
 
-pub fn convert(handlebars: &Handlebars,
-           template_name: &str,
-           notes_root: &Path,
-           dest_root: &Path,
-           relative: &Path,
-           base_url: &str) {
+pub fn convert(context: &::AppContext, path: &Path) {
+    let relative = path.path_relative_from(&context.root_notes).expect("Problem parsing relative url");
     let file_name = relative.filestem_str().unwrap();
-    let source_file = notes_root.clone().join(relative);
-    let dest_file = dest_root.clone().join(relative.dirname_str().unwrap()).join(format!("{}.html", file_name));
-    let source_contents = File::open(&source_file).read_to_string().unwrap();
+    let dest_file = context.root_dest.clone().join(relative.dirname_str().unwrap()).join(format!("{}.html", file_name));
+    let source_contents = File::open(path).read_to_string().unwrap();
     // Create Model
     let content = Markdown(source_contents.as_slice());
-    let parents = create_parent_links(base_url, relative, false);
+    let parents = create_parent_links(context.base_url.as_slice(), &relative, false);
 
     let model = MarkdownModel {
         name: String::from_str(file_name),
         parents : parents,
         content : format!("{}", content),
-        base_url: String::from_str(base_url)
+        base_url: context.base_url.clone()
     };
-    match handlebars.render(template_name, &model) {
+    match context.handlebars.render(type_str(), &model) {
         Ok(rendered) => {
             // Create File
             let mut file = File::create(&dest_file).ok().expect("Could not create markdown html file");
@@ -95,14 +90,15 @@ pub fn convert(handlebars: &Handlebars,
     }
 }
 
-pub fn converted_url(base_url: &str, relative: &Path) -> String {
-    let file_name = relative.filestem_str().unwrap();
+pub fn get_url(context: &::AppContext, path: &Path) -> String {
+    let file_name = path.filestem_str().unwrap();
+    let relative = path.path_relative_from(&context.root_notes).expect("Problem parsing relative url");
     let parent_relative = if relative.dirname_str().unwrap() == "." { 
         String::from_str("") 
     } else {
         format!("{}/", relative.dirname_str().unwrap())
     };
-    format!("{}{}{}", base_url, parent_relative, format!("{}.html", file_name))
+    format!("{}{}{}", context.base_url, parent_relative, format!("{}.html", file_name))
 }
 
 pub fn type_str() -> &'static str {
