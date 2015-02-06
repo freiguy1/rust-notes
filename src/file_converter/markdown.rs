@@ -14,6 +14,7 @@ use std::rc::Rc;
 
 use ::file_converter::{ create_parent_links, Link };
 
+
 #[derive(RustcEncodable)]
 struct MarkdownModel {
     name: String,
@@ -28,7 +29,7 @@ impl ToJson for MarkdownModel {
     }
 }
 
-pub fn create_handlebars(source_root: &Path) -> Result<Handlebars, &'static str> {
+pub fn register_handlebars(source_root: &Path, handlebars: &mut Handlebars) -> Result<(), &'static str> {
     let header_hbs_path = source_root.clone().join("partials/header.hbs");
     if !header_hbs_path.exists() {
         return Err("Missing partials/header.hbs");
@@ -47,11 +48,10 @@ pub fn create_handlebars(source_root: &Path) -> Result<Handlebars, &'static str>
     let header_hbs_contents = File::open(&header_hbs_path).read_to_string().unwrap();
     let footer_hbs_contents = File::open(&footer_hbs_path).read_to_string().unwrap();
     let note_hbs_contents = File::open(&note_hbs_path).read_to_string().unwrap();
-    let mut handlebars = Handlebars::new();
     handlebars.register_template_string(type_str(), format!("{}\n{}\n{}", header_hbs_contents, note_hbs_contents, footer_hbs_contents))
         .ok().expect("Error registering header|note|footer template");
 
-    Ok(handlebars)
+    Ok(())
 
 }
 

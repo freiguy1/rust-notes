@@ -162,26 +162,6 @@ impl Generator {
             return Err("Source directory missing required files");
         }
 
-        let dir_hbs_path = source_path.clone().join("layouts/dir.hbs");
-        if !dir_hbs_path.exists() {
-            return Err("Missing /layouts/dir.hbs");
-        }
-
-        let note_hbs_path = source_path.clone().join("layouts/note.hbs");
-        if !note_hbs_path.exists() {
-            return Err("Missing /layouts/note.hbs");
-        }
-
-        let header_hbs_path = source_path.clone().join("partials/header.hbs");
-        if !header_hbs_path.exists() {
-            return Err("Missing partials/header.hbs");
-        }
-
-        let footer_hbs_path = source_path.clone().join("partials/footer.hbs");
-        if !footer_hbs_path.exists() {
-            return Err("Missing partials/footer.hbs");
-        }
-
         let base_url = match args.flag_base_url {
             Some(ref base_url) if base_url.is_empty() => None,
             Some(base_url) => {
@@ -192,23 +172,9 @@ impl Generator {
             None => None
         };
 
+        let handlebars = try!(file_converter::FileType::register_handlebars(&source_path));
+
         // Good to go! Let's return something good
-
-        let dir_template_name = "dir";
-        let note_template_name = "markdown";
-
-        let dir_hbs_contents = File::open(&dir_hbs_path).read_to_string().unwrap();
-        let note_hbs_contents = File::open(&note_hbs_path).read_to_string().unwrap();
-        let header_hbs_contents = File::open(&header_hbs_path).read_to_string().unwrap();
-        let footer_hbs_contents = File::open(&footer_hbs_path).read_to_string().unwrap();
-
-        let mut handlebars = Handlebars::new();
-        handlebars.register_template_string(dir_template_name, format!("{}\n{}\n{}", header_hbs_contents, dir_hbs_contents, footer_hbs_contents))
-            .ok().expect("Error registering header|dir|footer template");
-        handlebars.register_template_string(note_template_name, format!("{}\n{}\n{}", header_hbs_contents, note_hbs_contents, footer_hbs_contents))
-            .ok().expect("Error registering header|note|footer template");
-
-        //let registered_filetypes = file_converter::FileType::register(&source_path).ok().unwrap();
 
         let context = AppContext {
             root_source: source_path.clone(),
@@ -222,8 +188,8 @@ impl Generator {
             root_source_path: source_path,
             root_dest_path: dest_path,
             notes_source_path: notes_source_path,
-            dir_template_name: dir_template_name,
-            note_template_name: note_template_name,
+            dir_template_name: "dir",
+            note_template_name: "markdown",
             base_url: base_url.unwrap_or(String::from_str("/")),
             context: context
         })
@@ -236,7 +202,12 @@ impl Generator {
             let assets_dest_path = self.root_dest_path.clone().join("assets");
             cp_dir(&assets_source_path, &assets_dest_path);
         }
-        self.generate_dir(&Path::new(""));
+        self.convert(&self.context.root_notes);
+        for item in fs::walk_dir(&self.context.root_notes).ok().unwrap() {
+            println!("{:?}", item);
+            self.convert(&item);
+        }
+        //self.generate_dir(&Path::new("."));
     }
 
     fn generate_dir(&self, relative_path: &Path) {
