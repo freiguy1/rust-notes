@@ -6,11 +6,11 @@ extern crate "rustc-serialize" as rustc_serialize;
 extern crate handlebars;
 
 use docopt::Docopt;
-use std::old_io::fs;
-use std::old_io::fs::PathExtensions;
+use std::fs;
+use std::fs::PathExt;
+use std::path::{ Path, PathBuf };
 use std::old_io::USER_DIR;
 use handlebars::Handlebars;
-
 
 mod file_type;
 
@@ -22,15 +22,12 @@ Options:
     -b, --base-url BASE     Base URL for site. Start with '/' but do not end with one. Should not include hostname.
 ";
 
-
-
 #[derive(Debug, RustcDecodable)]
 struct Args {
     arg_source: String,
     arg_dest: String,
     flag_base_url: Option<String>
 }
-
 
 fn main() {
     let args: Args = Docopt::new(USAGE)
@@ -47,22 +44,25 @@ fn main() {
 }
 
 fn cp_dir(source: &Path, dest: &Path) {
-    fs::mkdir(dest, USER_DIR).ok().expect("Problem copying directory");
+    fs::create_dir(dest).ok().expect("Problem copying directory");
     for item in fs::walk_dir(source).ok().expect("Problem copying directory") {
-        let relative = item.clone().path_relative_from(source).unwrap();
-        let dest_path = dest.clone().join(relative.as_str().unwrap());
+        let item = item.ok().expect("Problem copying directory").path();
+        let relative = item
+            .relative_from(source)
+            .unwrap();
+        let dest_path = dest.clone().join(&relative);
         if item.is_file() {
             fs::copy(&item, &dest_path).ok().expect("Problem copying directory");
         } else {
-            fs::mkdir(&dest_path, USER_DIR).ok().expect("Problem copying directory");
+            fs::create_dir(&dest_path).ok().expect("Problem copying directory");
         }
     }
 }
 
-struct AppContext {
-    root_source: Path,
-    root_dest: Path,
-    root_notes: Path, 
+pub struct AppContext {
+    root_source: PathBuf,
+    root_dest: PathBuf,
+    root_notes: PathBuf, 
     handlebars: Handlebars,
     base_url: String,
 }
@@ -89,7 +89,7 @@ impl Generator {
         }
 
         if !dest_path.is_dir() {
-            match fs::mkdir_recursive(&dest_path, USER_DIR) {
+            match fs::create_dir_all(&dest_path) {
                 Err(_) => return Err("Cannot create destination directory"),
                 _ => ()
             }
@@ -116,9 +116,9 @@ impl Generator {
         // Good to go! Let's return something good
 
         let context = AppContext {
-            root_source: source_path.clone(),
-            root_dest: dest_path.clone(),
-            root_notes: notes_source_path.clone(),
+            root_source: PathBuf::new(source_path),
+            root_dest: PathBuf::new(dest_path),
+            root_notes: PathBuf::new(notes_source_path),
             handlebars: handlebars,
             base_url: base_url.clone().unwrap_or(String::from_str("/"))
         };
@@ -137,26 +137,21 @@ impl Generator {
         }
         self.convert(&self.context.root_notes);
         for item in fs::walk_dir(&self.context.root_notes).ok().unwrap() {
-            self.convert(&item);
+            self.convert(&item.ok().unwrap().path());
         }
     }
 
 
 
     fn clean_dest(&self) {
-        match fs::readdir(&self.context.root_dest) {
-            Ok(items) => {
-                for item in items.iter() {
-                    if item.is_file() {
-                        //println!("removing file: {:?}", item);
-                        fs::unlink(item).ok().expect("Could not remove file");
-                    } else {
-                        //println!("removing directory: {:?}", item);
-                        fs::rmdir_recursive(item).ok().expect("Could not remove directory");
-                    }
-                }
-            },
-            Err(_) => ()
+
+        for entry in fs::read_dir(&self.context.root_dest).ok().unwrap() {
+            let entry = entry.ok().unwrap();
+            if entry.path().is_file() {
+                fs::remove_file(entry.path()).ok().expect("Could not remove file");
+            } else {
+                fs::remove_dir_all(entry.path()).ok().expect("Could not remove directory");
+            }
         }
     }
 }

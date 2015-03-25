@@ -1,51 +1,56 @@
 
 use std::cmp::Ordering;
-use std::old_io::fs;
-use std::old_io::fs::PathExtensions;
-use std::old_io::{ File, USER_DIR, USER_FILE };
+use std::path::{ AsPath, Path };
+use std::fs;
+use std::fs::{ PathExt, File };
+use std::io::{ Read, Write };
 
 use rustc_serialize::json;
 use rustc_serialize::json::{ ToJson, Json };
 
 use handlebars::Handlebars;
 
-use ::file_type::{ create_parent_links, Link };
+use ::file_type::{ create_parent_links, Link, read_file };
 
-pub fn register_handlebars(source_root: &Path, handlebars: &mut Handlebars) -> Result<(), &'static str> {
+pub fn register_handlebars<P: AsPath>(source_root: P, handlebars: &mut Handlebars) -> Result<(), &'static str> {
+    let source_root = source_root.as_path();
+
     // Validate generic stuff
-    let header_hbs_path = source_root.clone().join("partials/header.hbs");
+    let header_hbs_path = source_root.join("partials/header.hbs");
     if !header_hbs_path.exists() {
         return Err("Missing partials/header.hbs");
     }
 
-    let footer_hbs_path = source_root.clone().join("partials/footer.hbs");
+    let footer_hbs_path = source_root.join("partials/footer.hbs");
     if !footer_hbs_path.exists() {
         return Err("Missing partials/footer.hbs");
     }
 
     // Validate Dir
-    let dir_hbs_path = source_root.clone().join("layouts/dir.hbs");
+    let dir_hbs_path = source_root.join("layouts/dir.hbs");
     if !dir_hbs_path.exists() {
         return Err("Missing /layouts/dir.hbs");
     }
 
     // Grab generic stuff
-    let header_hbs_contents = File::open(&header_hbs_path).read_to_string().unwrap();
-    let footer_hbs_contents = File::open(&footer_hbs_path).read_to_string().unwrap();
-
+    let header_hbs_contents = try!(read_file(header_hbs_path));
+    let footer_hbs_contents = try!(read_file(footer_hbs_path));
+ 
     // Create Dir
     let dir_template_name = type_str();
-    let dir_hbs_contents = File::open(&dir_hbs_path).read_to_string().unwrap();
+    let dir_hbs_contents = try!(read_file(&dir_hbs_path));
+
     handlebars.register_template_string(dir_template_name, format!("{}\n{}\n{}", header_hbs_contents, dir_hbs_contents, footer_hbs_contents))
         .ok().expect("Error registering header|dir|footer template");
 
     Ok(())
 }
 
-pub fn get_url(context: &::AppContext, path: &Path) -> String {
-    let relative = path.path_relative_from(&context.root_notes).expect("Problem parsing relative url");
-    let relative = if relative.as_str().unwrap() == "." { String::new() } else { 
-        format!("{}/", relative.as_str().unwrap())
+pub fn get_url<P: AsPath>(context: &::AppContext, path: P) -> String {
+    let path = path.as_path();
+    let relative = path.relative_from(&context.root_notes).expect("Problem parsing relative url");
+    let relative = if relative.to_str().unwrap() == "." { String::new() } else { 
+        format!("{}/", relative.to_str().unwrap())
     };
     format!("{}{}", context.base_url, relative)
 }
@@ -55,8 +60,8 @@ pub fn type_str() -> &'static str {
     "dir"
 }
 
-pub fn is_valid_path(path: &Path) -> bool {
-    path.is_dir()
+pub fn is_valid_path<P: AsPath>(path: P) -> bool {
+    path.as_path().is_dir()
 }
 
 #[derive(RustcEncodable, Debug, PartialEq)]
@@ -80,16 +85,17 @@ impl ToJson for DirModel {
     }
 }
 
-pub fn convert(context: &::AppContext, path: &Path) {
-    let relative = path.path_relative_from(&context.root_notes).expect("Problem parsing relative url");
+pub fn convert<P: AsPath>(context: &::AppContext, path: P) {
+    let path = path.as_path();
+    let relative = path.relative_from(&context.root_notes).expect("Problem parsing relative url");
     let new_dir = context.root_dest.join(&relative);
     let new_dir_index = new_dir.join("index.html");
     if !new_dir.exists() {
-        fs::mkdir(&new_dir, USER_DIR).ok().expect("Cannot create destination subdir");
+        fs::create_dir(&new_dir).ok().expect("Cannot create destination subdir");
     }
     let children = get_children(context, path);
-    let name = match relative.filename() {
-        Some(_) => String::from_str(relative.filename_str().unwrap()),
+    let name = match relative.file_name() {
+        Some(_) => String::from_str(relative.file_name().unwrap().to_str().unwrap()),
         None => String::from_str("root")
     };
     let parents = create_parent_links(context.base_url.as_slice(), &relative, true);
@@ -103,23 +109,25 @@ pub fn convert(context: &::AppContext, path: &Path) {
         Ok(rendered) => {
             // Create File
             let mut file = File::create(&new_dir_index).ok().expect("Could not create dir index.html file");
-            fs::chmod(&new_dir_index, USER_FILE).ok().expect("Couldn't chmod new file");
-            file.write_str(rendered.as_slice())
+            //fs::chmod(&new_dir_index, USER_FILE).ok().expect("Couldn't chmod new file");
+            file.write_all(rendered.as_slice().as_bytes())
                 .ok().expect("Could not write html to file");
         },
         Err(why) => panic!("Error rendering markdown: {:?}", why)
     }
 }
 
-fn get_children(context: &::AppContext, path: &Path) -> Vec<Child> {
+fn get_children<P: AsPath>(context: &::AppContext, path: P) -> Vec<Child> {
+    let path = path.as_path();
     let mut result: Vec<Child> = Vec::new();
 
-        match fs::readdir(&path) {
+        match fs::read_dir(&path) {
             Ok(items) => {
-                for item in items.iter() {
-                    let child_opt = ::file_type::FileType::new(item)
+                for item in items {
+                    let item = item.unwrap().path();
+                    let child_opt = ::file_type::FileType::new(&item)
                         .map(|ft| Child {
-                            name: String::from_str(item.filestem_str().unwrap()),
+                            name: String::from_str(item.file_stem().unwrap().to_str().unwrap()),
                             url: ft.get_url(context),
                             file_type: String::from_str(ft.get_type_str())
                         });
