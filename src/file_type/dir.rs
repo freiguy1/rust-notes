@@ -1,9 +1,9 @@
 
 use std::cmp::Ordering;
-use std::path::{ AsPath, Path };
+use std::path::AsPath;
 use std::fs;
 use std::fs::{ PathExt, File };
-use std::io::{ Read, Write };
+use std::io::{ Write };
 
 use rustc_serialize::json;
 use rustc_serialize::json::{ ToJson, Json };
@@ -140,11 +140,8 @@ fn get_children<P: AsPath>(context: &::AppContext, path: P) -> Vec<Child> {
     result.as_mut_slice().sort_by(|a, b| {
         if a.file_type == String::from_str(type_str()) && b.file_type != String::from_str(type_str()) {
             Ordering::Less
-        } else if a.file_type != String::from_str(type_str()) && b.file_type == String::from_str(type_str()) {
-            Ordering::Greater
-
-        }else {
-            a.name.cmp(&b.name)
+        } else {
+            a.file_type.cmp(&b.file_type)
         }
 
     });

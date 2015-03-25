@@ -1,4 +1,4 @@
-#![feature(io, path, core, rustdoc, collections)]
+#![feature(std_misc, path_relative_from, fs_walk, path_ext, core, rustdoc, collections)]
 
 extern crate docopt;
 extern crate rustdoc;
@@ -9,7 +9,6 @@ use docopt::Docopt;
 use std::fs;
 use std::fs::PathExt;
 use std::path::{ Path, PathBuf };
-use std::old_io::USER_DIR;
 use handlebars::Handlebars;
 
 mod file_type;

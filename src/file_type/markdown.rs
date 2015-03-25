@@ -1,5 +1,5 @@
 
-use std::path::{ AsPath, Path };
+use std::path::AsPath;
 use std::fs::{ File, PathExt };
 use std::io::{ Read, Write };
 
@@ -69,7 +69,7 @@ pub fn convert<P: AsPath>(context: &::AppContext, path: P) {
     let file_name = relative.file_stem().unwrap().to_str().unwrap();
     let dest_file = context.root_dest.clone().join(relative.parent().unwrap()).join(format!("{}.html", file_name));
     let mut source_contents = String::new();
-    File::open(path).ok().unwrap().read_to_string(&mut source_contents);
+    File::open(path).ok().unwrap().read_to_string(&mut source_contents).ok().expect("Could not read markdown file");
     // Create Model
     let content = Markdown(source_contents.as_slice());
     let parents = create_parent_links(context.base_url.as_slice(), &relative, false);
