@@ -1,5 +1,5 @@
 
-use std::path::AsPath;
+use std::path::Path;
 use std::fs::{ File, PathExt };
 use std::io::{ Read, Write };
 
@@ -23,12 +23,12 @@ struct MarkdownModel {
 
 impl ToJson for MarkdownModel {
     fn to_json(&self) -> Json {
-        Json::from_str(json::encode(&self).unwrap().as_slice()).unwrap()
+        Json::from_str(&json::encode(&self).unwrap()).unwrap()
     }
 }
 
-pub fn register_handlebars<P: AsPath>(source_root: P, handlebars: &mut Handlebars) -> Result<(), &'static str> {
-    let source_root = source_root.as_path();
+pub fn register_handlebars<P: AsRef<Path>>(source_root: P, handlebars: &mut Handlebars) -> Result<(), &'static str> {
+    let source_root = source_root.as_ref();
     let header_hbs_path = source_root.clone().join("partials/header.hbs");
     if !header_hbs_path.exists() {
         return Err("Missing partials/header.hbs");
@@ -54,8 +54,8 @@ pub fn register_handlebars<P: AsPath>(source_root: P, handlebars: &mut Handlebar
 
 }
 
-pub fn is_valid_path<P: AsPath>(path: P) -> bool {
-    let path = path.as_path();
+pub fn is_valid_path<P: AsRef<Path>>(path: P) -> bool {
+    let path = path.as_ref();
     let name = path.file_name().unwrap().to_str().unwrap();
     path.is_file() && (
         name.ends_with(".md") || 
@@ -63,16 +63,16 @@ pub fn is_valid_path<P: AsPath>(path: P) -> bool {
         name.ends_with(".mkd"))
 }
 
-pub fn convert<P: AsPath>(context: &::AppContext, path: P) {
-    let path = path.as_path();
+pub fn convert<P: AsRef<Path>>(context: &::AppContext, path: P) {
+    let path = path.as_ref();
     let relative = path.relative_from(&context.root_notes).expect("Problem parsing relative url");
     let file_name = relative.file_stem().unwrap().to_str().unwrap();
     let dest_file = context.root_dest.clone().join(relative.parent().unwrap()).join(format!("{}.html", file_name));
     let mut source_contents = String::new();
     File::open(path).ok().unwrap().read_to_string(&mut source_contents).ok().expect("Could not read markdown file");
     // Create Model
-    let content = Markdown(source_contents.as_slice());
-    let parents = create_parent_links(context.base_url.as_slice(), &relative, false);
+    let content = Markdown(&source_contents);
+    let parents = create_parent_links(&context.base_url, &relative, false);
 
     let model = MarkdownModel {
         name: String::from_str(file_name),
@@ -85,15 +85,15 @@ pub fn convert<P: AsPath>(context: &::AppContext, path: P) {
             // Create File
             let mut file = File::create(&dest_file).ok().expect("Could not create markdown html file");
             //fs::chmod(&dest_file, USER_FILE).ok().expect("Couldn't chmod new file");
-            file.write_all(rendered.as_slice().as_bytes())
+            file.write_all(rendered.as_bytes())
                 .ok().expect("Could not write html to file");
         },
         Err(why) => panic!("Error rendering markdown: {:?}", why)
     }
 }
 
-pub fn get_url<P: AsPath>(context: &::AppContext, path: P) -> String {
-    let path = path.as_path();
+pub fn get_url<P: AsRef<Path>>(context: &::AppContext, path: P) -> String {
+    let path = path.as_ref();
     let file_name = path.file_stem().unwrap().to_str().unwrap();
     let relative = path.relative_from(&context.root_notes).expect("Problem parsing relative url");
     let parent_relative = if relative.parent().is_none() {

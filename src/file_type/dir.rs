@@ -1,6 +1,6 @@
 
 use std::cmp::Ordering;
-use std::path::AsPath;
+use std::path::Path;
 use std::fs;
 use std::fs::{ PathExt, File };
 use std::io::{ Write };
@@ -12,8 +12,8 @@ use handlebars::Handlebars;
 
 use ::file_type::{ create_parent_links, Link, read_file };
 
-pub fn register_handlebars<P: AsPath>(source_root: P, handlebars: &mut Handlebars) -> Result<(), &'static str> {
-    let source_root = source_root.as_path();
+pub fn register_handlebars<P: AsRef<Path>>(source_root: P, handlebars: &mut Handlebars) -> Result<(), &'static str> {
+    let source_root: &Path = source_root.as_ref();
 
     // Validate generic stuff
     let header_hbs_path = source_root.join("partials/header.hbs");
@@ -46,8 +46,8 @@ pub fn register_handlebars<P: AsPath>(source_root: P, handlebars: &mut Handlebar
     Ok(())
 }
 
-pub fn get_url<P: AsPath>(context: &::AppContext, path: P) -> String {
-    let path = path.as_path();
+pub fn get_url<P: AsRef<Path>>(context: &::AppContext, path: P) -> String {
+    let path: &Path = path.as_ref();
     let relative = path.relative_from(&context.root_notes).expect("Problem parsing relative url");
     let relative = if relative.to_str().unwrap() == "." { String::new() } else { 
         format!("{}/", relative.to_str().unwrap())
@@ -60,8 +60,8 @@ pub fn type_str() -> &'static str {
     "dir"
 }
 
-pub fn is_valid_path<P: AsPath>(path: P) -> bool {
-    path.as_path().is_dir()
+pub fn is_valid_path<P: AsRef<Path>>(path: P) -> bool {
+    path.as_ref().is_dir()
 }
 
 #[derive(RustcEncodable, Debug, PartialEq)]
@@ -81,12 +81,12 @@ struct DirModel {
 
 impl ToJson for DirModel {
     fn to_json(&self) -> Json {
-        Json::from_str(json::encode(&self).unwrap().as_slice()).unwrap()
+        Json::from_str(&json::encode(&self).unwrap()).unwrap()
     }
 }
 
-pub fn convert<P: AsPath>(context: &::AppContext, path: P) {
-    let path = path.as_path();
+pub fn convert<P: AsRef<Path>>(context: &::AppContext, path: P) {
+    let path = path.as_ref();
     let relative = path.relative_from(&context.root_notes).expect("Problem parsing relative url");
     let new_dir = context.root_dest.join(&relative);
     let new_dir_index = new_dir.join("index.html");
@@ -98,7 +98,7 @@ pub fn convert<P: AsPath>(context: &::AppContext, path: P) {
         Some(_) => String::from_str(relative.file_name().unwrap().to_str().unwrap()),
         None => String::from_str("root")
     };
-    let parents = create_parent_links(context.base_url.as_slice(), &relative, true);
+    let parents = create_parent_links(&context.base_url, &relative, true);
     let dir_model = DirModel {
         name: name,
         parents: parents,
@@ -110,15 +110,15 @@ pub fn convert<P: AsPath>(context: &::AppContext, path: P) {
             // Create File
             let mut file = File::create(&new_dir_index).ok().expect("Could not create dir index.html file");
             //fs::chmod(&new_dir_index, USER_FILE).ok().expect("Couldn't chmod new file");
-            file.write_all(rendered.as_slice().as_bytes())
+            file.write_all(rendered.as_bytes())
                 .ok().expect("Could not write html to file");
         },
         Err(why) => panic!("Error rendering markdown: {:?}", why)
     }
 }
 
-fn get_children<P: AsPath>(context: &::AppContext, path: P) -> Vec<Child> {
-    let path = path.as_path();
+fn get_children<P: AsRef<Path>>(context: &::AppContext, path: P) -> Vec<Child> {
+    let path = path.as_ref();
     let mut result: Vec<Child> = Vec::new();
 
         match fs::read_dir(&path) {

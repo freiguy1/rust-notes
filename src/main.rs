@@ -1,8 +1,8 @@
-#![feature(std_misc, path_relative_from, fs_walk, path_ext, core, rustdoc, collections)]
+#![feature(convert, path_relative_from, fs_walk, path_ext, rustdoc, collections)]
 
 extern crate docopt;
 extern crate rustdoc;
-extern crate "rustc-serialize" as rustc_serialize;
+extern crate rustc_serialize;
 extern crate handlebars;
 
 use docopt::Docopt;
@@ -80,8 +80,8 @@ impl Generator {
     }
 
     pub fn new(args: Args) -> Result<Generator, &'static str> {
-        let source_path = Path::new(args.arg_source.as_slice());
-        let dest_path = Path::new(args.arg_dest.as_slice());
+        let source_path = Path::new(&args.arg_source);
+        let dest_path = Path::new(&args.arg_dest);
 
         if !source_path.is_dir() {
             return Err("Invalid source path");
@@ -115,9 +115,9 @@ impl Generator {
         // Good to go! Let's return something good
 
         let context = AppContext {
-            root_source: PathBuf::new(source_path),
-            root_dest: PathBuf::new(dest_path),
-            root_notes: PathBuf::new(notes_source_path),
+            root_source: PathBuf::from(source_path),
+            root_dest: PathBuf::from(dest_path),
+            root_notes: notes_source_path,
             handlebars: handlebars,
             base_url: base_url.clone().unwrap_or(String::from_str("/"))
         };

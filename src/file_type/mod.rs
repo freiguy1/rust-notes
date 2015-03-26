@@ -1,5 +1,5 @@
 use handlebars::Handlebars;
-use std::path::{ AsPath, Path, PathBuf };
+use std::path::{ Path, PathBuf };
 use std::fs::File;
 use std::io::Read;
 
@@ -13,13 +13,13 @@ pub enum FileType {
 
 impl FileType {
 
-    pub fn new<P: AsPath>(path: P) -> Option<FileType> {
-        let path = path.as_path();
+    pub fn new<P: AsRef<Path>>(path: P) -> Option<FileType> {
+        let path: &Path = path.as_ref();
         match path {
             p if markdown::is_valid_path(p) =>
-                Some(FileType::Markdown(PathBuf::new(path))),
+                Some(FileType::Markdown(PathBuf::from(path))),
             p if dir::is_valid_path(p) =>
-                Some(FileType::Dir(PathBuf::new(path))),
+                Some(FileType::Dir(PathBuf::from(path))),
             _ => None
         }
     }
@@ -68,7 +68,7 @@ fn create_parent_links(base_url: &str, path: &Path, is_dir: bool) -> Vec<Link> {
             name: String::from_str("root"),
             url: format!("{}", base_url)
         }];
-        let mut temp = PathBuf::new(path.clone().parent().unwrap());
+        let mut temp = PathBuf::from(path.clone().parent().unwrap());
         while temp.file_name().is_some() {
             let file_name = String::from_str(temp.file_name().unwrap().to_str().unwrap());
             let url = format!("{}{}", &base_url, &file_name);
@@ -82,8 +82,8 @@ fn create_parent_links(base_url: &str, path: &Path, is_dir: bool) -> Vec<Link> {
     }
 }
 
-pub fn read_file<P: AsPath>(path: P) -> Result<String, &'static str> {
-    let path = path.as_path();
+pub fn read_file<P: AsRef<Path>>(path: P) -> Result<String, &'static str> {
+    let path: &Path = path.as_ref();
     let mut file = match File::open(&path) {
         Ok(ok_file) => ok_file,
         Err(_) => return Err("Could not open path.")
