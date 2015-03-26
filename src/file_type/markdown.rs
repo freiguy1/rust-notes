@@ -44,9 +44,9 @@ pub fn register_handlebars<P: AsRef<Path>>(source_root: P, handlebars: &mut Hand
         return Err("Missing /layouts/note.hbs");
     }
 
-    let header_hbs_contents = try!(read_file(&header_hbs_path));//File::open(&header_hbs_path).read_to_string().unwrap();
-    let footer_hbs_contents = try!(read_file(&note_hbs_path));//File::open(&footer_hbs_path).read_to_string().unwrap();
-    let note_hbs_contents = try!(read_file(&note_hbs_path));//File::open(&note_hbs_path).read_to_string().unwrap();
+    let header_hbs_contents = try!(read_file(&header_hbs_path));
+    let footer_hbs_contents = try!(read_file(&footer_hbs_path));
+    let note_hbs_contents = try!(read_file(&note_hbs_path));
     handlebars.register_template_string(type_str(), format!("{}\n{}\n{}", header_hbs_contents, note_hbs_contents, footer_hbs_contents))
         .ok().expect("Error registering header|note|footer template");
 
