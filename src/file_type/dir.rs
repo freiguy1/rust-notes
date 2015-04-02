@@ -35,7 +35,7 @@ pub fn register_handlebars<P: AsRef<Path>>(source_root: P, handlebars: &mut Hand
     // Grab generic stuff
     let header_hbs_contents = try!(read_file(header_hbs_path));
     let footer_hbs_contents = try!(read_file(footer_hbs_path));
- 
+
     // Create Dir
     let dir_template_name = type_str();
     let dir_hbs_contents = try!(read_file(&dir_hbs_path));
@@ -49,7 +49,7 @@ pub fn register_handlebars<P: AsRef<Path>>(source_root: P, handlebars: &mut Hand
 pub fn get_url<P: AsRef<Path>>(context: &::AppContext, path: P) -> String {
     let path: &Path = path.as_ref();
     let relative = path.relative_from(&context.root_notes).expect("Problem parsing relative url");
-    let relative = if relative.to_str().unwrap() == "." { String::new() } else { 
+    let relative = if relative.to_str().unwrap() == "." { String::new() } else {
         format!("{}/", relative.to_str().unwrap())
     };
     format!("{}{}", context.base_url, relative)
@@ -137,7 +137,7 @@ fn get_children<P: AsRef<Path>>(context: &::AppContext, path: P) -> Vec<Child> {
             Err(_) => ()
         }
 
-    result.as_mut_slice().sort_by(|a, b| {
+    (&mut result).sort_by(|a, b| {
         if a.file_type == String::from_str(type_str()) && b.file_type != String::from_str(type_str()) {
             Ordering::Less
         } else {

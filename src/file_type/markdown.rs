@@ -58,8 +58,8 @@ pub fn is_valid_path<P: AsRef<Path>>(path: P) -> bool {
     let path = path.as_ref();
     let name = path.file_name().unwrap().to_str().unwrap();
     path.is_file() && (
-        name.ends_with(".md") || 
-        name.ends_with(".markdown") || 
+        name.ends_with(".md") ||
+        name.ends_with(".markdown") ||
         name.ends_with(".mkd"))
 }
 
@@ -96,8 +96,9 @@ pub fn get_url<P: AsRef<Path>>(context: &::AppContext, path: P) -> String {
     let path = path.as_ref();
     let file_name = path.file_stem().unwrap().to_str().unwrap();
     let relative = path.relative_from(&context.root_notes).expect("Problem parsing relative url");
-    let parent_relative = if relative.parent().is_none() {
-        String::from_str("") 
+    let parent_relative = if relative.parent().map_or_else(|| true,
+        |p| p == Path::new("/") || p == Path::new("")) {
+        String::from_str("")
     } else {
         format!("{}/", relative.parent().unwrap().to_str().unwrap())
     };
