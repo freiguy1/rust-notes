@@ -6,51 +6,27 @@ use std::io::Read;
 mod markdown;
 mod dir;
 
-pub enum FileType {
-    Dir(PathBuf),
-    Markdown(PathBuf)
+pub trait FileType {
+    fn get_url(&self, context: &::AppContext) -> String;
+    fn convert(&self, context: &::AppContext);
+    fn get_type_str(&self) -> &'static str;
 }
 
-impl FileType {
 
-    pub fn new<P: AsRef<Path>>(path: P) -> Option<FileType> {
-        let path: &Path = path.as_ref();
-        match path {
-            p if markdown::is_valid_path(p) =>
-                Some(FileType::Markdown(PathBuf::from(path))),
-            p if dir::is_valid_path(p) =>
-                Some(FileType::Dir(PathBuf::from(path))),
-            _ => None
-        }
-    }
+pub fn initialize<P: AsRef<Path>>(source_root: P) -> Result<Handlebars, &'static str> {
+    let mut handlebars = Handlebars::new();
+    try!(markdown::Markdown::register_handlebars(&source_root, &mut handlebars));
+    try!(dir::Dir::register_handlebars(&source_root, &mut handlebars));
+    Ok(handlebars)
+}
 
-    fn get_url(&self, context: &::AppContext) -> String {
-        match *self {
-            FileType::Dir(ref p) => dir::get_url(context, &p),
-            FileType::Markdown(ref p) => markdown::get_url(context, &p)
-        }
-    }
-
-    fn get_type_str(&self) -> &'static str {
-        match *self {
-            FileType::Dir(_) => dir::type_str(),
-            FileType::Markdown(_) => markdown::type_str()
-        }
-    }
-
-    pub fn convert(&self, context: &::AppContext) {
-        match *self {
-            FileType::Dir(ref p) => dir::convert(context, &p),
-            FileType::Markdown(ref p) => markdown::convert(context, &p)
-        }
-    }
-
-    pub fn register_handlebars(source_root: &Path) -> Result<Handlebars, &'static str> {
-        let mut handlebars = Handlebars::new();
-        try!(markdown::register_handlebars(source_root, &mut handlebars));
-        try!(dir::register_handlebars(source_root, &mut handlebars));
-
-        Ok(handlebars)
+pub fn create_file_type<P: AsRef<Path>>(path: P) -> Option<Box<FileType>> {
+    match &path {
+        p if markdown::Markdown::is_valid_path(p) =>
+            Some(Box::new(markdown::Markdown::new(p))),
+        p if dir::Dir::is_valid_path(p) =>
+            Some(Box::new(dir::Dir::new(p))),
+        _ => None
     }
 }
 
@@ -95,4 +71,3 @@ pub fn read_file<P: AsRef<Path>>(path: P) -> Result<String, &'static str> {
     }
     Ok(contents)
 }
-

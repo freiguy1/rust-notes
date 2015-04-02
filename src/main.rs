@@ -61,7 +61,7 @@ fn cp_dir(source: &Path, dest: &Path) {
 pub struct AppContext {
     root_source: PathBuf,
     root_dest: PathBuf,
-    root_notes: PathBuf, 
+    root_notes: PathBuf,
     handlebars: Handlebars,
     base_url: String,
 }
@@ -73,7 +73,7 @@ struct Generator {
 impl Generator {
 
     fn convert(&self, path: &Path) {
-        match file_type::FileType::new(path) {
+        match file_type::create_file_type(path) {
             Some(ft) => ft.convert(&self.context),
             None => { println!("Couldn't handle file: {:?}", path); }
         }
@@ -110,7 +110,7 @@ impl Generator {
             None => None
         };
 
-        let handlebars = try!(file_type::FileType::register_handlebars(&source_path));
+        let handlebars = try!(file_type::initialize(&source_path));
 
         // Good to go! Let's return something good
 
@@ -121,7 +121,7 @@ impl Generator {
             handlebars: handlebars,
             base_url: base_url.clone().unwrap_or(String::from_str("/"))
         };
-        
+
         Ok(Generator{
             context: context
         })
