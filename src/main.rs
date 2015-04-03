@@ -74,10 +74,7 @@ struct Generator {
 impl Generator {
 
     fn convert(&self, path: &Path) {
-        match self.file_type_manager.create_file_type(path) {
-            Some(ft) => ft.convert(&self.context),
-            None => { println!("Couldn't handle file: {:?}", path); }
-        }
+        self.file_type_manager.create_file_type(path).convert(&self.context);
     }
 
     pub fn new(args: Args) -> Result<Generator, &'static str> {

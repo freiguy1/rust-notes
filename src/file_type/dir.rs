@@ -73,13 +73,12 @@ impl Dir {
                 Ok(items) => {
                     for item in items {
                         let item = item.unwrap().path();
-                        let child_opt = self.file_type_manager.create_file_type(&item)
-                            .map(|ft| Child {
-                                name: String::from_str(item.file_stem().unwrap().to_str().unwrap()),
-                                url: ft.get_url(context),
-                                file_type: String::from_str(ft.get_type_str())
-                            });
-                        if child_opt.is_some() { result.push(child_opt.unwrap()); }
+                        let child = self.file_type_manager.create_file_type(&item);
+                        result.push(Child {
+                            name: String::from_str(item.file_stem().unwrap().to_str().unwrap()),
+                            url: child.get_url(context),
+                            file_type: String::from_str(child.get_type_str())
+                        });
                     }
                 },
                 Err(_) => ()

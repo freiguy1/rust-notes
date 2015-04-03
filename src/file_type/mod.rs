@@ -18,7 +18,8 @@ trait FileTypeFactory {
 }
 
 pub struct FileTypeManager {
-    factories: Vec<Box<FileTypeFactory>>
+    factories: Vec<Box<FileTypeFactory>>,
+    unknown_factory: unknown::UnknownFactory
 }
 
 impl FileTypeManager {
@@ -28,7 +29,8 @@ impl FileTypeManager {
             factories: vec![
                 Box::new(markdown::MarkdownFactory),
                 Box::new(dir::DirFactory)
-            ]
+            ],
+            unknown_factory: unknown::UnknownFactory
         }
     }
 
@@ -39,14 +41,14 @@ impl FileTypeManager {
         Ok(())
     }
 
-    pub fn create_file_type<P: AsRef<Path>>(&self, path: P) -> Option<Box<FileType>> {
+    pub fn create_file_type<P: AsRef<Path>>(&self, path: P) -> Box<FileType> {
         for factory in self.factories.iter() {
             let result_maybe = factory.try_create(path.as_ref());
             if result_maybe.is_some() {
-                return result_maybe;
+                return result_maybe.unwrap();
             }
         }
-        None
+        self.unknown_factory.try_create(path.as_ref()).unwrap()
     }
 }
 
