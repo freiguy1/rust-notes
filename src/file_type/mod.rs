@@ -4,6 +4,7 @@ use std::io::Read;
 
 mod markdown;
 mod dir;
+mod unknown;
 
 pub trait FileType {
     fn get_url(&self, context: &::AppContext) -> String;
