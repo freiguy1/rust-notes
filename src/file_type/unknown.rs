@@ -32,7 +32,7 @@ impl ::file_type::FileType for Unknown {
         } else {
             format!("{}/", relative.parent().unwrap().to_str().unwrap())
         };
-        format!("{}{}{:?}", context.base_url, parent_relative, file_name)
+        format!("{}{}{}", context.base_url, parent_relative, file_name.to_str().unwrap())
     }
 
     fn convert(&self, context: &::AppContext) {
