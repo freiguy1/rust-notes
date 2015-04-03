@@ -13,8 +13,6 @@ pub trait FileType {
 }
 
 trait FileTypeFactory {
-    //fn try_create<P: AsRef<Path>>(&self, path: P) -> Option<Box<FileType>>;
-    //fn initialize<P: AsRef<Path>>(&self, source_root: P, handlebars: &mut Handlebars) -> Result<(), &'static str>;
     fn try_create(&self, path: &Path) -> Option<Box<FileType>>;
     fn initialize(&self, source_root: &Path, handlebars: &mut Handlebars) -> Result<(), &'static str>;
 }
@@ -50,27 +48,7 @@ impl FileTypeManager {
         }
         None
     }
-
 }
-
-/*
-pub fn initialize<P: AsRef<Path>>(source_root: P) -> Result<Handlebars, &'static str> {
-    let mut handlebars = Handlebars::new();
-    try!(markdown::Markdown::register_handlebars(&source_root, &mut handlebars));
-    try!(dir::Dir::register_handlebars(&source_root, &mut handlebars));
-    Ok(handlebars)
-}
-
-pub fn create_file_type<P: AsRef<Path>>(path: P) -> Option<Box<FileType>> {
-    match &path {
-        p if markdown::Markdown::is_valid_path(p) =>
-            Some(Box::new(markdown::Markdown::new(p))),
-        p if dir::Dir::is_valid_path(p) =>
-            Some(Box::new(dir::Dir::new(p))),
-        _ => None
-    }
-}
-*/
 
 #[derive(RustcEncodable)]
 struct Link {
