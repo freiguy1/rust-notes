@@ -88,7 +88,7 @@ impl Dir {
             if a.file_type == String::from_str(TYPE_STR) && b.file_type != String::from_str(TYPE_STR) {
                 Ordering::Less
             } else {
-                a.file_type.cmp(&b.file_type)
+                a.name.cmp(&b.name)
             }
 
         });
