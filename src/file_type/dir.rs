@@ -87,6 +87,8 @@ impl Dir {
         (&mut result).sort_by(|a, b| {
             if a.file_type == String::from_str(TYPE_STR) && b.file_type != String::from_str(TYPE_STR) {
                 Ordering::Less
+            } else if  a.file_type != String::from_str(TYPE_STR) && b.file_type == String::from_str(TYPE_STR) {
+                Ordering::Greater
             } else {
                 a.name.cmp(&b.name)
             }
