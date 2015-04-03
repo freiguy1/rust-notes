@@ -12,7 +12,48 @@ pub trait FileType {
     fn get_type_str(&self) -> &'static str;
 }
 
+trait FileTypeFactory {
+    //fn try_create<P: AsRef<Path>>(&self, path: P) -> Option<Box<FileType>>;
+    //fn initialize<P: AsRef<Path>>(&self, source_root: P, handlebars: &mut Handlebars) -> Result<(), &'static str>;
+    fn try_create(&self, path: &Path) -> Option<Box<FileType>>;
+    fn initialize(&self, source_root: &Path, handlebars: &mut Handlebars) -> Result<(), &'static str>;
+}
 
+pub struct FileTypeManager {
+    factories: Vec<Box<FileTypeFactory>>
+}
+
+impl FileTypeManager {
+    pub fn new() -> FileTypeManager {
+
+        FileTypeManager {
+            factories: vec![
+                Box::new(markdown::MarkdownFactory),
+                Box::new(dir::DirFactory)
+            ]
+        }
+    }
+
+    pub fn initialize_app_context(&self, app_context: &mut ::AppContext) -> Result<(), &'static str> {
+        for factory in self.factories.iter() {
+            try!(factory.initialize(&app_context.root_source, &mut app_context.handlebars));
+        }
+        Ok(())
+    }
+
+    pub fn create_file_type<P: AsRef<Path>>(&self, path: P) -> Option<Box<FileType>> {
+        for factory in self.factories.iter() {
+            let result_maybe = factory.try_create(path.as_ref());
+            if result_maybe.is_some() {
+                return result_maybe;
+            }
+        }
+        None
+    }
+
+}
+
+/*
 pub fn initialize<P: AsRef<Path>>(source_root: P) -> Result<Handlebars, &'static str> {
     let mut handlebars = Handlebars::new();
     try!(markdown::Markdown::register_handlebars(&source_root, &mut handlebars));
@@ -29,6 +70,7 @@ pub fn create_file_type<P: AsRef<Path>>(path: P) -> Option<Box<FileType>> {
         _ => None
     }
 }
+*/
 
 #[derive(RustcEncodable)]
 struct Link {

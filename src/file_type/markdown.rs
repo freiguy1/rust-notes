@@ -14,18 +14,23 @@ use ::file_type::{ create_parent_links, Link, read_file, FileType };
 
 static TYPE_STR: &'static str = "markdown";
 
-pub struct Markdown {
-    path: PathBuf,
-    type_str: &'static str
-}
 
-impl Markdown {
-    pub fn new<P: AsRef<Path>>(path: P) -> Markdown {
-        Markdown { path: PathBuf::from(path.as_ref()), type_str: TYPE_STR }
+pub struct MarkdownFactory;
+
+impl ::file_type::FileTypeFactory for MarkdownFactory {
+    fn try_create(&self, path: &Path) -> Option<Box<FileType>> {
+        let name = path.file_name().unwrap().to_str().unwrap();
+        let is_valid = path.is_file() && (
+            name.ends_with(".md") ||
+            name.ends_with(".markdown") ||
+            name.ends_with(".mkd"));
+        if is_valid {
+            let result = Markdown { path: PathBuf::from(path), type_str: TYPE_STR };
+            Some(Box::new(result))
+        } else { None }
     }
 
-    pub fn register_handlebars<P: AsRef<Path>>(source_root: P, handlebars: &mut Handlebars) -> Result<(), &'static str> {
-        let source_root = source_root.as_ref();
+    fn initialize(&self, source_root: &Path, handlebars: &mut Handlebars) -> Result<(), &'static str> {
         let header_hbs_path = source_root.clone().join("partials/header.hbs");
         if !header_hbs_path.exists() {
             return Err("Missing partials/header.hbs");
@@ -49,15 +54,11 @@ impl Markdown {
 
         Ok(())
     }
+}
 
-    pub fn is_valid_path<P: AsRef<Path>>(path: P) -> bool {
-        let path = path.as_ref();
-        let name = path.file_name().unwrap().to_str().unwrap();
-        path.is_file() && (
-            name.ends_with(".md") ||
-            name.ends_with(".markdown") ||
-            name.ends_with(".mkd"))
-    }
+pub struct Markdown {
+    path: PathBuf,
+    type_str: &'static str
 }
 
 impl FileType for Markdown {

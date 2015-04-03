@@ -67,13 +67,14 @@ pub struct AppContext {
 }
 
 struct Generator {
-    context: AppContext
+    context: AppContext,
+    file_type_manager: file_type::FileTypeManager
 }
 
 impl Generator {
 
     fn convert(&self, path: &Path) {
-        match file_type::create_file_type(path) {
+        match self.file_type_manager.create_file_type(path) {
             Some(ft) => ft.convert(&self.context),
             None => { println!("Couldn't handle file: {:?}", path); }
         }
@@ -110,20 +111,23 @@ impl Generator {
             None => None
         };
 
-        let handlebars = try!(file_type::initialize(&source_path));
 
-        // Good to go! Let's return something good
-
-        let context = AppContext {
+        let mut context = AppContext {
             root_source: PathBuf::from(source_path),
             root_dest: PathBuf::from(dest_path),
             root_notes: notes_source_path,
-            handlebars: handlebars,
+            handlebars: Handlebars::new(),
             base_url: base_url.clone().unwrap_or(String::from_str("/"))
         };
 
+        let file_type_manager = file_type::FileTypeManager::new();
+        try!(file_type_manager.initialize_app_context(&mut context));
+
+        // Good to go! Let's return something good
+
         Ok(Generator{
-            context: context
+            context: context,
+            file_type_manager: file_type_manager
         })
     }
 

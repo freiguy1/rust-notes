@@ -14,18 +14,20 @@ use ::file_type::{ create_parent_links, Link, read_file, FileType };
 
 static TYPE_STR: &'static str = "dir";
 
-pub struct Dir {
-    path: PathBuf,
-    type_str: &'static str
-}
+pub struct DirFactory;
 
-impl Dir {
-    pub fn new<P: AsRef<Path>>(path: P) -> Dir {
-        Dir{ path: PathBuf::from(path.as_ref()), type_str: TYPE_STR }
+impl ::file_type::FileTypeFactory for DirFactory {
+    fn try_create(&self, path: &Path) -> Option<Box<FileType>> {
+        if path.is_dir() {
+            Some(Box::new(Dir {
+                path: PathBuf::from(path),
+                type_str: TYPE_STR,
+                file_type_manager: ::file_type::FileTypeManager::new()
+            }))
+        } else { None }
     }
 
-    pub fn register_handlebars<P: AsRef<Path>>(source_root: P, handlebars: &mut Handlebars) -> Result<(), &'static str>{
-        let source_root: &Path = source_root.as_ref();
+    fn initialize(&self, source_root: &Path, handlebars: &mut Handlebars) -> Result<(), &'static str> {
 
         // Validate generic stuff
         let header_hbs_path = source_root.join("partials/header.hbs");
@@ -57,11 +59,14 @@ impl Dir {
 
         Ok(())
     }
+}
 
-    pub fn is_valid_path<P: AsRef<Path>>(path: P) -> bool{
-        path.as_ref().is_dir()
-    }
+pub struct Dir {
+    path: PathBuf,
+    type_str: &'static str
+}
 
+impl Dir {
     fn get_children(&self, context: &::AppContext) -> Vec<Child> {
         let mut result: Vec<Child> = Vec::new();
 
@@ -69,7 +74,7 @@ impl Dir {
                 Ok(items) => {
                     for item in items {
                         let item = item.unwrap().path();
-                        let child_opt = ::file_type::create_file_type(&item)
+                        let child_opt = self.file_type_manager.create_file_type(&item)
                             .map(|ft| Child {
                                 name: String::from_str(item.file_stem().unwrap().to_str().unwrap()),
                                 url: ft.get_url(context),
@@ -140,7 +145,7 @@ impl FileType for Dir {
 }
 
 
-#[derive(RustcEncodable, Debug, PartialEq)]
+#[derive(RustcEncodable, PartialEq)]
 struct Child {
     name: String,
     url: String,
