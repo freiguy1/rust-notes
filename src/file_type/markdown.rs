@@ -8,8 +8,6 @@ use rustc_serialize::json::{ ToJson, Json };
 
 use rustdoc::html::markdown::Markdown as RustMarkdown;
 
-use handlebars::Handlebars;
-
 use ::file_type::{ create_parent_links, Link, read_file, FileType };
 
 static TYPE_STR: &'static str = "markdown";
@@ -30,18 +28,18 @@ impl ::file_type::FileTypeFactory for MarkdownFactory {
         } else { None }
     }
 
-    fn initialize(&self, source_root: &Path, handlebars: &mut Handlebars) -> Result<(), &'static str> {
-        let header_hbs_path = source_root.clone().join("partials/header.hbs");
+    fn initialize(&self, app_context: &mut ::AppContext) -> Result<(), &'static str> {
+        let header_hbs_path = app_context.root_source.join("partials/header.hbs");
         if !header_hbs_path.exists() {
             return Err("Missing partials/header.hbs");
         }
 
-        let footer_hbs_path = source_root.clone().join("partials/footer.hbs");
+        let footer_hbs_path = app_context.root_source.join("partials/footer.hbs");
         if !footer_hbs_path.exists() {
             return Err("Missing partials/footer.hbs");
         }
 
-        let note_hbs_path = source_root.join("layouts/note.hbs");
+        let note_hbs_path = app_context.root_source.join("layouts/note.hbs");
         if !note_hbs_path.exists() {
             return Err("Missing /layouts/note.hbs");
         }
@@ -49,7 +47,7 @@ impl ::file_type::FileTypeFactory for MarkdownFactory {
         let header_hbs_contents = try!(read_file(&header_hbs_path));
         let footer_hbs_contents = try!(read_file(&footer_hbs_path));
         let note_hbs_contents = try!(read_file(&note_hbs_path));
-        handlebars.register_template_string(TYPE_STR, format!("{}\n{}\n{}", header_hbs_contents, note_hbs_contents, footer_hbs_contents))
+        app_context.handlebars.register_template_string(TYPE_STR, format!("{}\n{}\n{}", header_hbs_contents, note_hbs_contents, footer_hbs_contents))
             .ok().expect("Error registering header|note|footer template");
 
         Ok(())

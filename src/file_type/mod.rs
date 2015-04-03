@@ -1,4 +1,3 @@
-use handlebars::Handlebars;
 use std::path::{ Path, PathBuf };
 use std::fs::File;
 use std::io::Read;
@@ -14,7 +13,7 @@ pub trait FileType {
 
 trait FileTypeFactory {
     fn try_create(&self, path: &Path) -> Option<Box<FileType>>;
-    fn initialize(&self, source_root: &Path, handlebars: &mut Handlebars) -> Result<(), &'static str>;
+    fn initialize(&self, app_context: &mut ::AppContext) -> Result<(), &'static str>;
 }
 
 pub struct FileTypeManager {
@@ -34,7 +33,7 @@ impl FileTypeManager {
 
     pub fn initialize_app_context(&self, app_context: &mut ::AppContext) -> Result<(), &'static str> {
         for factory in self.factories.iter() {
-            try!(factory.initialize(&app_context.root_source, &mut app_context.handlebars));
+            try!(factory.initialize(app_context));
         }
         Ok(())
     }

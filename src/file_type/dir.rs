@@ -8,8 +8,6 @@ use std::io::{ Write };
 use rustc_serialize::json;
 use rustc_serialize::json::{ ToJson, Json };
 
-use handlebars::Handlebars;
-
 use ::file_type::{ create_parent_links, Link, read_file, FileType };
 
 static TYPE_STR: &'static str = "dir";
@@ -27,21 +25,21 @@ impl ::file_type::FileTypeFactory for DirFactory {
         } else { None }
     }
 
-    fn initialize(&self, source_root: &Path, handlebars: &mut Handlebars) -> Result<(), &'static str> {
+    fn initialize(&self, app_context: &mut ::AppContext) -> Result<(), &'static str> {
 
         // Validate generic stuff
-        let header_hbs_path = source_root.join("partials/header.hbs");
+        let header_hbs_path = app_context.root_source.join("partials/header.hbs");
         if !header_hbs_path.exists() {
             return Err("Missing partials/header.hbs");
         }
 
-        let footer_hbs_path = source_root.join("partials/footer.hbs");
+        let footer_hbs_path = app_context.root_source.join("partials/footer.hbs");
         if !footer_hbs_path.exists() {
             return Err("Missing partials/footer.hbs");
         }
 
         // Validate Dir
-        let dir_hbs_path = source_root.join("layouts/dir.hbs");
+        let dir_hbs_path = app_context.root_source.join("layouts/dir.hbs");
         if !dir_hbs_path.exists() {
             return Err("Missing /layouts/dir.hbs");
         }
@@ -54,7 +52,7 @@ impl ::file_type::FileTypeFactory for DirFactory {
         let dir_template_name = TYPE_STR;
         let dir_hbs_contents = try!(read_file(&dir_hbs_path));
 
-        handlebars.register_template_string(dir_template_name, format!("{}\n{}\n{}", header_hbs_contents, dir_hbs_contents, footer_hbs_contents))
+        app_context.handlebars.register_template_string(dir_template_name, format!("{}\n{}\n{}", header_hbs_contents, dir_hbs_contents, footer_hbs_contents))
             .ok().expect("Error registering header|dir|footer template");
 
         Ok(())
