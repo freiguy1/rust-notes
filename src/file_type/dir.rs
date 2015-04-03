@@ -63,7 +63,8 @@ impl ::file_type::FileTypeFactory for DirFactory {
 
 pub struct Dir {
     path: PathBuf,
-    type_str: &'static str
+    type_str: &'static str,
+    file_type_manager: ::file_type::FileTypeManager
 }
 
 impl Dir {
