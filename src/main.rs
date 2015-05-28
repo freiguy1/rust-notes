@@ -1,4 +1,4 @@
-#![feature(convert, path_relative_from, fs_walk, path_ext, rustdoc, collections)]
+#![feature(path_relative_from, fs_walk, path_ext, rustdoc, collections)]
 
 extern crate docopt;
 extern crate rustdoc;
