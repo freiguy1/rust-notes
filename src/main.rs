@@ -1,4 +1,4 @@
-#![feature(path_relative_from, fs_walk, path_ext, rustdoc, collections)]
+#![feature(path_relative_from, fs_walk, path_ext, rustdoc)]
 
 extern crate docopt;
 extern crate rustdoc;
@@ -101,7 +101,7 @@ impl Generator {
         let base_url = match args.flag_base_url {
             Some(ref base_url) if base_url.is_empty() => None,
             Some(base_url) => {
-                let mut result = String::from_str(base_url.trim_matches('/'));
+                let mut result = String::from(base_url.trim_matches('/'));
                 result = format!("/{}/", result);
                 Some(result)
             },
@@ -114,7 +114,7 @@ impl Generator {
             root_dest: PathBuf::from(dest_path),
             root_notes: notes_source_path,
             handlebars: Handlebars::new(),
-            base_url: base_url.clone().unwrap_or(String::from_str("/"))
+            base_url: base_url.clone().unwrap_or(String::from("/"))
         };
 
         let file_type_manager = file_type::FileTypeManager::new();

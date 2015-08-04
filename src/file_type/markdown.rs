@@ -66,7 +66,7 @@ impl FileType for Markdown {
         let relative = self.path.relative_from(&context.root_notes).expect("Problem parsing relative url");
         let parent_relative = if relative.parent().map_or_else(|| true,
             |p| p == Path::new("/") || p == Path::new("")) {
-            String::from_str("")
+            String::new()
         } else {
             format!("{}/", relative.parent().unwrap().to_str().unwrap())
         };
@@ -84,7 +84,7 @@ impl FileType for Markdown {
         let parents = create_parent_links(&context.base_url, &relative, false);
 
         let model = MarkdownModel {
-            name: String::from_str(file_name),
+            name: String::from(file_name),
             parents : parents,
             content : format!("{}", content),
             base_url: context.base_url.clone()

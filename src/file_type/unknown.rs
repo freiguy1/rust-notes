@@ -28,7 +28,7 @@ impl ::file_type::FileType for Unknown {
         let file_name = self.path.file_name().expect("Problem parsing relative url");
         let relative = self.path.relative_from(&context.root_notes).expect("Problem parsing relative url");
         let parent_relative = if relative.parent().unwrap() == Path::new("") {
-            String::from_str("")
+            String::from("")
         } else {
             format!("{}/", relative.parent().unwrap().to_str().unwrap())
         };

@@ -75,9 +75,9 @@ impl Dir {
                         let item = item.unwrap().path();
                         let child = self.file_type_manager.create_file_type(&item);
                         result.push(Child {
-                            name: String::from_str(item.file_stem().unwrap().to_str().unwrap()),
+                            name: String::from(item.file_stem().unwrap().to_str().unwrap()),
                             url: child.get_url(context),
-                            file_type: String::from_str(child.get_type_str())
+                            file_type: String::from(child.get_type_str())
                         });
                     }
                 },
@@ -85,9 +85,9 @@ impl Dir {
             }
 
         (&mut result).sort_by(|a, b| {
-            if a.file_type == String::from_str(TYPE_STR) && b.file_type != String::from_str(TYPE_STR) {
+            if a.file_type == String::from(TYPE_STR) && b.file_type != String::from(TYPE_STR) {
                 Ordering::Less
-            } else if  a.file_type != String::from_str(TYPE_STR) && b.file_type == String::from_str(TYPE_STR) {
+            } else if  a.file_type != String::from(TYPE_STR) && b.file_type == String::from(TYPE_STR) {
                 Ordering::Greater
             } else {
                 a.name.cmp(&b.name)
@@ -117,8 +117,8 @@ impl FileType for Dir {
         }
         let children = self.get_children(context);
         let name = match relative.file_name() {
-            Some(_) => String::from_str(relative.file_name().unwrap().to_str().unwrap()),
-            None => String::from_str("root")
+            Some(_) => String::from(relative.file_name().unwrap().to_str().unwrap()),
+            None => String::from("root")
         };
         let parents = create_parent_links(&context.base_url, &relative, true);
         let dir_model = DirModel {
