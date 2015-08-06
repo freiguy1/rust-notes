@@ -9,6 +9,7 @@ use rustc_serialize::json::{ ToJson, Json };
 use rustdoc::html::markdown::Markdown as RustMarkdown;
 
 use ::file_type::{ create_parent_links, Link, read_file, FileType };
+use ::util::RelativeFrom;
 
 static TYPE_STR: &'static str = "markdown";
 
@@ -63,7 +64,7 @@ impl FileType for Markdown {
 
     fn get_url(&self, context: &::AppContext) -> String {
         let file_name = self.path.file_stem().unwrap().to_str().unwrap();
-        let relative = self.path.relative_from(&context.root_notes).expect("Problem parsing relative url");
+        let relative = self.path.my_relative_from(&context.root_notes).expect("Problem parsing relative url");
         let parent_relative = if relative.parent().map_or_else(|| true,
             |p| p == Path::new("/") || p == Path::new("")) {
             String::new()
@@ -74,7 +75,7 @@ impl FileType for Markdown {
     }
 
     fn convert(&self, context: &::AppContext) {
-        let relative = self.path.relative_from(&context.root_notes).expect("Problem parsing relative url");
+        let relative = self.path.my_relative_from(&context.root_notes).expect("Problem parsing relative url");
         let file_name = relative.file_stem().unwrap().to_str().unwrap();
         let dest_file = context.root_dest.clone().join(relative.parent().unwrap()).join(format!("{}.html", file_name));
         let mut source_contents = String::new();

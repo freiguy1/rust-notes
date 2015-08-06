@@ -1,6 +1,8 @@
 use std::path::{ Path, PathBuf };
 use std::fs;
 
+use ::util::RelativeFrom;
+
 static TYPE_STR: &'static str = "unknown";
 
 pub struct UnknownFactory;
@@ -26,7 +28,7 @@ pub struct Unknown {
 impl ::file_type::FileType for Unknown {
     fn get_url(&self, context: &::AppContext) -> String {
         let file_name = self.path.file_name().expect("Problem parsing relative url");
-        let relative = self.path.relative_from(&context.root_notes).expect("Problem parsing relative url");
+        let relative = self.path.my_relative_from(&context.root_notes).expect("Problem parsing relative url");
         let parent_relative = if relative.parent().unwrap() == Path::new("") {
             String::from("")
         } else {
@@ -36,7 +38,7 @@ impl ::file_type::FileType for Unknown {
     }
 
     fn convert(&self, context: &::AppContext) {
-        let relative = self.path.relative_from(&context.root_notes).expect("Problem parsing relative url");
+        let relative = self.path.my_relative_from(&context.root_notes).expect("Problem parsing relative url");
         let destination = context.root_dest.join(&relative);
         fs::copy(&self.path, &destination).ok().expect("Problem copying unknown file");
     }

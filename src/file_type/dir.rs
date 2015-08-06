@@ -9,6 +9,7 @@ use rustc_serialize::json;
 use rustc_serialize::json::{ ToJson, Json };
 
 use ::file_type::{ create_parent_links, Link, read_file, FileType };
+use ::util::RelativeFrom;
 
 static TYPE_STR: &'static str = "dir";
 
@@ -101,7 +102,7 @@ impl Dir {
 
 impl FileType for Dir {
     fn get_url(&self, context: &::AppContext) -> String {
-        let relative = self.path.relative_from(&context.root_notes).expect("Problem parsing relative url");
+        let relative = self.path.my_relative_from(&context.root_notes).expect("Problem parsing relative url");
         let relative = if relative.to_str().unwrap() == "." { String::new() } else {
             format!("{}/", relative.to_str().unwrap())
         };
@@ -109,7 +110,7 @@ impl FileType for Dir {
     }
 
     fn convert(&self, context: &::AppContext) {
-        let relative = self.path.relative_from(&context.root_notes).expect("Problem parsing relative url");
+        let relative = self.path.my_relative_from(&context.root_notes).expect("Problem parsing relative url");
         let new_dir = context.root_dest.join(&relative);
         let new_dir_index = new_dir.join("index.html");
         if !new_dir.exists() {

@@ -1,4 +1,4 @@
-#![feature(path_relative_from, path_ext, rustdoc)]
+#![feature(path_ext, rustdoc)]
 
 extern crate docopt;
 extern crate rustdoc;
@@ -10,6 +10,7 @@ use std::fs;
 use std::fs::PathExt;
 use std::path::{ Path, PathBuf };
 use handlebars::Handlebars;
+use util::RelativeFrom;
 
 mod file_type;
 mod util;
@@ -47,7 +48,7 @@ fn cp_dir(source: &Path, dest: &Path) {
     for item in util::walk_dir(source).ok().expect("Problem copying directory") {
         let item = item.ok().expect("Problem copying directory").path();
         let relative = item
-            .relative_from(source)
+            .my_relative_from(source)
             .unwrap();
         let dest_path = dest.clone().join(&relative);
         if item.is_file() {
