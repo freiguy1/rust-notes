@@ -19,7 +19,7 @@ pub struct MarkdownFactory;
 impl ::file_type::FileTypeFactory for MarkdownFactory {
     fn try_create(&self, path: &Path) -> Option<Box<FileType>> {
         let name = path.file_name().unwrap().to_str().unwrap();
-        let path_metadata = metadata(&path).expect("Could not fetch file metadata");
+        let path_metadata = metadata(&path).ok().expect("Could not fetch file metadata");
         let is_valid = path_metadata.is_file() && (
             name.ends_with(".md") ||
             name.ends_with(".markdown") ||

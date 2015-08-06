@@ -2,7 +2,7 @@
 use std::cmp::Ordering;
 use std::path::{ Path, PathBuf };
 use std::fs;
-use std::fs::{ PathExt, File };
+use std::fs::{ metadata, PathExt, File };
 use std::io::{ Write };
 
 use rustc_serialize::json;
@@ -17,7 +17,7 @@ pub struct DirFactory;
 
 impl ::file_type::FileTypeFactory for DirFactory {
     fn try_create(&self, path: &Path) -> Option<Box<FileType>> {
-        if path.is_dir() {
+        if metadata(&path).ok().expect("Error fetching metadata for file").is_dir() {
             Some(Box::new(Dir {
                 path: PathBuf::from(path),
                 type_str: TYPE_STR,
@@ -30,18 +30,18 @@ impl ::file_type::FileTypeFactory for DirFactory {
 
         // Validate generic stuff
         let header_hbs_path = app_context.root_source.join("partials/header.hbs");
-        if !header_hbs_path.exists() {
+        if !metadata(&header_hbs_path).is_ok() {
             return Err("Missing partials/header.hbs");
         }
 
         let footer_hbs_path = app_context.root_source.join("partials/footer.hbs");
-        if !footer_hbs_path.exists() {
+        if !metadata(&footer_hbs_path).is_ok() {
             return Err("Missing partials/footer.hbs");
         }
 
         // Validate Dir
         let dir_hbs_path = app_context.root_source.join("layouts/dir.hbs");
-        if !dir_hbs_path.exists() {
+        if !metadata(&dir_hbs_path).is_ok() {
             return Err("Missing /layouts/dir.hbs");
         }
 
@@ -113,7 +113,7 @@ impl FileType for Dir {
         let relative = self.path.my_relative_from(&context.root_notes).expect("Problem parsing relative url");
         let new_dir = context.root_dest.join(&relative);
         let new_dir_index = new_dir.join("index.html");
-        if !new_dir.exists() {
+        if !metadata(&new_dir).is_ok() {
             fs::create_dir(&new_dir).ok().expect("Cannot create destination subdir");
         }
         let children = self.get_children(context);

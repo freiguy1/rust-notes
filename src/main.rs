@@ -46,7 +46,7 @@ fn cp_dir(source: &Path, dest: &Path) {
     fs::create_dir(dest).ok().expect("Problem copying directory");
     for item in util::walk_dir(source).ok().expect("Problem copying directory") {
         let item = item.ok().expect("Problem copying directory").path();
-        let item_metadata = fs::metadata(&item).expect("Error fetching file metadata");
+        let item_metadata = fs::metadata(&item).ok().expect("Error fetching file metadata");
         let relative = item
             .my_relative_from(source)
             .unwrap();
@@ -80,9 +80,9 @@ impl Generator {
 
     pub fn new(args: Args) -> Result<Generator, &'static str> {
         let source_path = Path::new(&args.arg_source);
-        let source_path_metadata = fs::metadata(source_path).expect("Error fetching file metadata");
+        let source_path_metadata = fs::metadata(source_path).ok().expect("Error fetching file metadata");
         let dest_path = Path::new(&args.arg_dest);
-        let dest_path_metadata = fs::metadata(dest_path).expect("Error fetching file metadata");
+        let dest_path_metadata = fs::metadata(dest_path).ok().expect("Error fetching file metadata");
 
         if !source_path_metadata.is_dir() {
             return Err("Invalid source path");
@@ -97,7 +97,7 @@ impl Generator {
 
         // Validate source
         let notes_source_path = source_path.join("notes");
-        let notes_source_path_metadata = fs::metadata(source_path)
+        let notes_source_path_metadata = fs::metadata(source_path).ok()
             .expect("Error fetching file metadata");
 
         if !notes_source_path_metadata.is_dir() {
@@ -137,7 +137,7 @@ impl Generator {
     pub fn begin(&self) {
         self.clean_dest();
         let assets_source_path = self.context.root_source.join("assets");
-        let assets_source_path_metadata = fs::metadata(&assets_source_path)
+        let assets_source_path_metadata = fs::metadata(&assets_source_path).ok()
             .expect("Error fetching file metadata");
         if assets_source_path_metadata.is_dir() {
             let assets_dest_path = self.context.root_dest.join("assets");
@@ -154,7 +154,7 @@ impl Generator {
     fn clean_dest(&self) {
         for entry in fs::read_dir(&self.context.root_dest).ok().unwrap() {
             let entry = entry.ok().unwrap();
-            let entry_metadata = fs::metadata(entry.path())
+            let entry_metadata = fs::metadata(entry.path()).ok()
                 .expect("Error fetching file metadata");
             if entry_metadata.is_file() {
                 fs::remove_file(entry.path()).ok().expect("Could not remove file");

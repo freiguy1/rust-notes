@@ -26,7 +26,10 @@ impl Iterator for WalkDir {
                     Some(Err(e)) => return Some(Err(e)),
                     Some(Ok(next)) => {
                         let path = next.path();
-                        if path.is_dir() {
+                        let path_metadata = fs::metadata(&path)
+                            .ok()
+                            .expect("Error fetching metadata for file");
+                        if path_metadata.is_dir() {
                             self.stack.push(fs::read_dir(&*path));
                         }
                         return Some(Ok(next))
