@@ -1,6 +1,6 @@
 
 use std::path::{ Path, PathBuf };
-use std::fs::{ File, PathExt };
+use std::fs::{ File, metadata };
 use std::io::{ Read, Write };
 
 use rustc_serialize::json;
@@ -19,7 +19,8 @@ pub struct MarkdownFactory;
 impl ::file_type::FileTypeFactory for MarkdownFactory {
     fn try_create(&self, path: &Path) -> Option<Box<FileType>> {
         let name = path.file_name().unwrap().to_str().unwrap();
-        let is_valid = path.is_file() && (
+        let path_metadata = metadata(&path).expect("Could not fetch file metadata");
+        let is_valid = path_metadata.is_file() && (
             name.ends_with(".md") ||
             name.ends_with(".markdown") ||
             name.ends_with(".mkd"));
@@ -31,17 +32,17 @@ impl ::file_type::FileTypeFactory for MarkdownFactory {
 
     fn initialize(&self, app_context: &mut ::AppContext) -> Result<(), &'static str> {
         let header_hbs_path = app_context.root_source.join("partials/header.hbs");
-        if !header_hbs_path.exists() {
+        if !metadata(&header_hbs_path).is_ok() {
             return Err("Missing partials/header.hbs");
         }
 
         let footer_hbs_path = app_context.root_source.join("partials/footer.hbs");
-        if !footer_hbs_path.exists() {
+        if !metadata(&footer_hbs_path).is_ok() {
             return Err("Missing partials/footer.hbs");
         }
 
         let note_hbs_path = app_context.root_source.join("layouts/note.hbs");
-        if !note_hbs_path.exists() {
+        if !metadata(&note_hbs_path).is_ok() {
             return Err("Missing /layouts/note.hbs");
         }
 

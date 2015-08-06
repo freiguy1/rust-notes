@@ -53,7 +53,6 @@ impl RelativeFrom for Path {
     fn my_relative_from<'a, P: ?Sized + AsRef<Path>>(&'a self, base: &'a P) -> Option<&Path> {
         iter_after(self.components(), base.as_ref().components()).map(|c| c.as_path())
     }
-
 }
 
 fn iter_after<A, I, J>(mut iter: I, mut prefix: J) -> Option<I> where

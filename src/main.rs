@@ -1,4 +1,4 @@
-#![feature(path_ext, rustdoc)]
+#![feature(rustdoc)]
 
 extern crate docopt;
 extern crate rustdoc;
@@ -7,7 +7,6 @@ extern crate handlebars;
 
 use docopt::Docopt;
 use std::fs;
-use std::fs::PathExt;
 use std::path::{ Path, PathBuf };
 use handlebars::Handlebars;
 use util::RelativeFrom;
@@ -47,11 +46,12 @@ fn cp_dir(source: &Path, dest: &Path) {
     fs::create_dir(dest).ok().expect("Problem copying directory");
     for item in util::walk_dir(source).ok().expect("Problem copying directory") {
         let item = item.ok().expect("Problem copying directory").path();
+        let item_metadata = fs::metadata(&item).expect("Error fetching file metadata");
         let relative = item
             .my_relative_from(source)
             .unwrap();
         let dest_path = dest.clone().join(&relative);
-        if item.is_file() {
+        if item_metadata.is_file() {
             fs::copy(&item, &dest_path).ok().expect("Problem copying directory");
         } else {
             fs::create_dir(&dest_path).ok().expect("Problem copying directory");
@@ -80,13 +80,15 @@ impl Generator {
 
     pub fn new(args: Args) -> Result<Generator, &'static str> {
         let source_path = Path::new(&args.arg_source);
+        let source_path_metadata = fs::metadata(source_path).expect("Error fetching file metadata");
         let dest_path = Path::new(&args.arg_dest);
+        let dest_path_metadata = fs::metadata(dest_path).expect("Error fetching file metadata");
 
-        if !source_path.is_dir() {
+        if !source_path_metadata.is_dir() {
             return Err("Invalid source path");
         }
 
-        if !dest_path.is_dir() {
+        if !dest_path_metadata.is_dir() {
             match fs::create_dir_all(&dest_path) {
                 Err(_) => return Err("Cannot create destination directory"),
                 _ => ()
@@ -94,8 +96,11 @@ impl Generator {
         }
 
         // Validate source
-        let notes_source_path = source_path.clone().join("notes");
-        if !notes_source_path.is_dir() {
+        let notes_source_path = source_path.join("notes");
+        let notes_source_path_metadata = fs::metadata(source_path)
+            .expect("Error fetching file metadata");
+
+        if !notes_source_path_metadata.is_dir() {
             return Err("Source directory missing required files");
         }
 
@@ -131,9 +136,11 @@ impl Generator {
 
     pub fn begin(&self) {
         self.clean_dest();
-        let assets_source_path = self.context.root_source.clone().join("assets");
-        if assets_source_path.is_dir() {
-            let assets_dest_path = self.context.root_dest.clone().join("assets");
+        let assets_source_path = self.context.root_source.join("assets");
+        let assets_source_path_metadata = fs::metadata(&assets_source_path)
+            .expect("Error fetching file metadata");
+        if assets_source_path_metadata.is_dir() {
+            let assets_dest_path = self.context.root_dest.join("assets");
             cp_dir(&assets_source_path, &assets_dest_path);
         }
         self.convert(&self.context.root_notes);
@@ -145,10 +152,11 @@ impl Generator {
 
 
     fn clean_dest(&self) {
-
         for entry in fs::read_dir(&self.context.root_dest).ok().unwrap() {
             let entry = entry.ok().unwrap();
-            if entry.path().is_file() {
+            let entry_metadata = fs::metadata(entry.path())
+                .expect("Error fetching file metadata");
+            if entry_metadata.is_file() {
                 fs::remove_file(entry.path()).ok().expect("Could not remove file");
             } else {
                 fs::remove_dir_all(entry.path()).ok().expect("Could not remove directory");
