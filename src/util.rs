@@ -45,7 +45,6 @@ impl Iterator for WalkDir {
 }
 
 // Source for relative_from copied from rust nightly source.
-
 pub trait RelativeFrom {
     fn my_relative_from<'a, P: ?Sized + AsRef<Path>>(&'a self, base: &'a P) -> Option<&Path>;
 }
@@ -74,5 +73,3 @@ fn iter_after<A, I, J>(mut iter: I, mut prefix: J) -> Option<I> where
     }
 }
 
-//pub fn relative_from<P: AsRef<Path>>(full: &P, base: &P) -> Option<&Path> {
-//}
