@@ -2,8 +2,9 @@
 name = "rust-notes"
 version = "0.0.1"
 dependencies = [
- "docopt 0.6.69 (registry+https://github.com/rust-lang/crates.io-index)",
- "handlebars 0.9.3 (git+https://github.com/sunng87/handlebars-rust.git)",
+ "docopt 0.6.70 (registry+https://github.com/rust-lang/crates.io-index)",
+ "handlebars 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pulldown-cmark 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -26,7 +27,7 @@ dependencies = [
 
 [[package]]
 name = "docopt"
-version = "0.6.69"
+version = "0.6.70"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "regex 0.1.41 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -35,9 +36,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "getopts"
+version = "0.2.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "log 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "handlebars"
 version = "0.9.3"
-source = "git+https://github.com/sunng87/handlebars-rust.git#8662e4ce165099bd5233801502c5096d21cb578d"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "log 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "num 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -73,6 +82,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "rand 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "pulldown-cmark"
+version = "0.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "getopts 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

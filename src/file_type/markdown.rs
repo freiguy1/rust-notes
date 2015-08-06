@@ -6,7 +6,8 @@ use std::io::{ Read, Write };
 use rustc_serialize::json;
 use rustc_serialize::json::{ ToJson, Json };
 
-use rustdoc::html::markdown::Markdown as RustMarkdown;
+use pulldown_cmark::Parser;
+use pulldown_cmark::html;
 
 use ::file_type::{ create_parent_links, Link, read_file, FileType };
 use ::util::RelativeFrom;
@@ -82,7 +83,7 @@ impl FileType for Markdown {
         let mut source_contents = String::new();
         File::open(&self.path).ok().unwrap().read_to_string(&mut source_contents).ok().expect("Could not read markdown file");
         // Create Model
-        let content = RustMarkdown(&source_contents);
+        let content = render_html(&source_contents);
         let parents = create_parent_links(&context.base_url, &relative, false);
 
         let model = MarkdownModel {
@@ -120,4 +121,11 @@ impl ToJson for MarkdownModel {
     fn to_json(&self) -> Json {
         Json::from_str(&json::encode(&self).unwrap()).unwrap()
     }
+}
+
+fn render_html(text: &str) -> String {
+    let mut s = String::with_capacity(text.len() * 3 / 2);
+    let p = Parser::new(&text);
+    html::push_html(&mut s, p);
+    s
 }

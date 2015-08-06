@@ -1,9 +1,8 @@
-#![feature(rustdoc)]
-
 extern crate docopt;
-extern crate rustdoc;
 extern crate rustc_serialize;
 extern crate handlebars;
+extern crate pulldown_cmark;
+
 
 use docopt::Docopt;
 use std::fs;

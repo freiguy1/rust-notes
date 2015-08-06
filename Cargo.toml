@@ -4,12 +4,9 @@ name = "rust-notes"
 version = "0.0.1"
 authors = ["Ethan Frei <ethan.frei@gmail.com>"]
 
-[dependencies.handlebars]
-
-git = "https://github.com/sunng87/handlebars-rust.git"
-
 [dependencies]
 
+handlebars = "*"
 docopt = "*"
 rustc-serialize = "*"
-
+pulldown-cmark = "*"
