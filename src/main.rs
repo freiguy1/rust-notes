@@ -1,4 +1,4 @@
-#![feature(path_relative_from, fs_walk, path_ext, rustdoc)]
+#![feature(path_relative_from, path_ext, rustdoc)]
 
 extern crate docopt;
 extern crate rustdoc;
@@ -12,6 +12,7 @@ use std::path::{ Path, PathBuf };
 use handlebars::Handlebars;
 
 mod file_type;
+mod util;
 
 // Docopt usage string
 static USAGE: &'static str = "
@@ -39,12 +40,11 @@ fn main() {
         },
         Err(message) => panic!(message)
     }
-
 }
 
 fn cp_dir(source: &Path, dest: &Path) {
     fs::create_dir(dest).ok().expect("Problem copying directory");
-    for item in fs::walk_dir(source).ok().expect("Problem copying directory") {
+    for item in util::walk_dir(source).ok().expect("Problem copying directory") {
         let item = item.ok().expect("Problem copying directory").path();
         let relative = item
             .relative_from(source)
@@ -136,7 +136,7 @@ impl Generator {
             cp_dir(&assets_source_path, &assets_dest_path);
         }
         self.convert(&self.context.root_notes);
-        for item in fs::walk_dir(&self.context.root_notes).ok().unwrap() {
+        for item in util::walk_dir(&self.context.root_notes).ok().unwrap() {
             self.convert(&item.ok().unwrap().path());
         }
     }
