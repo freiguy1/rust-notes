@@ -1,6 +1,6 @@
 
 use std::{ fs, io };
-use std::fs::{ PathExt, ReadDir, DirEntry };
+use std::fs::{ ReadDir, DirEntry };
 use std::path::Path;
 
 

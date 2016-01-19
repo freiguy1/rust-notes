@@ -2,7 +2,7 @@
 use std::cmp::Ordering;
 use std::path::{ Path, PathBuf };
 use std::fs;
-use std::fs::{ metadata, PathExt, File };
+use std::fs::{ metadata, File };
 use std::io::{ Write };
 
 use rustc_serialize::json;

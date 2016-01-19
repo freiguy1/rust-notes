@@ -69,7 +69,7 @@ fn create_parent_links(base_url: &str, path: &Path, is_dir: bool) -> Vec<Link> {
         let mut temp = PathBuf::from(path.clone().parent().unwrap());
         while temp.file_name().is_some() {
             let file_name = String::from(temp.file_name().unwrap().to_str().unwrap());
-            let url = format!("{}{}", &base_url, &file_name);
+            let url = format!("{}{}", &base_url, temp.to_str().unwrap());
             result.insert(1, Link {
                 name: file_name,
                 url: url
