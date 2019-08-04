@@ -1,10 +1,11 @@
 extern crate docopt;
-extern crate rustc_serialize;
 extern crate handlebars;
 extern crate pulldown_cmark;
+extern crate serde;
 
 
 use docopt::Docopt;
+use serde::Deserialize;
 use std::fs;
 use std::path::{ Path, PathBuf };
 use handlebars::Handlebars;
@@ -21,7 +22,7 @@ Options:
     -b, --base-url BASE     Base URL for site. Start with '/' but do not end with one. Should not include hostname.
 ";
 
-#[derive(Debug, RustcDecodable)]
+#[derive(Debug, Deserialize)]
 struct Args {
     arg_source: String,
     arg_dest: String,
@@ -30,7 +31,7 @@ struct Args {
 
 fn main() {
     let args: Args = Docopt::new(USAGE)
-        .and_then(|d| d.decode())
+        .and_then(|d| d.deserialize())
         .unwrap_or_else(|e| e.exit());
     //Generator(args).start();
     match Generator::new(args) {

@@ -5,8 +5,7 @@ use std::fs;
 use std::fs::{ metadata, File };
 use std::io::{ Write };
 
-use rustc_serialize::json;
-use rustc_serialize::json::{ ToJson, Json };
+use serde::Serialize;
 
 use ::file_type::{ create_parent_links, Link, read_file, FileType };
 use ::util::RelativeFrom;
@@ -146,14 +145,14 @@ impl FileType for Dir {
 }
 
 
-#[derive(RustcEncodable, PartialEq)]
+#[derive(Serialize, PartialEq)]
 struct Child {
     name: String,
     url: String,
     file_type: String
 }
 
-#[derive(RustcEncodable)]
+#[derive(Serialize)]
 struct DirModel {
     name: String,
     parents: Vec<Link>,
@@ -161,8 +160,7 @@ struct DirModel {
     base_url: String
 }
 
-impl ToJson for DirModel {
-    fn to_json(&self) -> Json {
-        Json::from_str(&json::encode(&self).unwrap()).unwrap()
-    }
-}
+// impl ToJson for DirModel {
+//         Json::from_str(&json::encode(&self).unwrap()).unwrap()
+//     }
+// }

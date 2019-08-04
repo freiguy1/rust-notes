@@ -3,11 +3,10 @@ use std::path::{ Path, PathBuf };
 use std::fs::{ File, metadata };
 use std::io::{ Read, Write };
 
-use rustc_serialize::json;
-use rustc_serialize::json::{ ToJson, Json };
-
 use pulldown_cmark::Parser;
 use pulldown_cmark::html;
+
+use serde::Serialize;
 
 use ::file_type::{ create_parent_links, Link, read_file, FileType };
 use ::util::RelativeFrom;
@@ -109,7 +108,7 @@ impl FileType for Markdown {
     }
 }
 
-#[derive(RustcEncodable)]
+#[derive(Serialize)]
 struct MarkdownModel {
     name: String,
     parents: Vec<Link>,
@@ -117,11 +116,11 @@ struct MarkdownModel {
     base_url: String
 }
 
-impl ToJson for MarkdownModel {
-    fn to_json(&self) -> Json {
-        Json::from_str(&json::encode(&self).unwrap()).unwrap()
-    }
-}
+// impl ToJson for MarkdownModel {
+//     fn to_json(&self) -> Json {
+//         Json::from_str(&json::encode(&self).unwrap()).unwrap()
+//     }
+// }
 
 fn render_html(text: &str) -> String {
     let mut s = String::with_capacity(text.len() * 3 / 2);

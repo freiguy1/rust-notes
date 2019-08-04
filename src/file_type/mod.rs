@@ -2,6 +2,8 @@ use std::path::{ Path, PathBuf };
 use std::fs::File;
 use std::io::Read;
 
+use serde::Serialize;
+
 mod markdown;
 mod dir;
 mod unknown;
@@ -52,7 +54,7 @@ impl FileTypeManager {
     }
 }
 
-#[derive(RustcEncodable)]
+#[derive(Serialize)]
 struct Link {
     name: String,
     url: String
