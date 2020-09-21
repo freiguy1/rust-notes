@@ -1,14 +1,15 @@
-
-use std::{ fs, io };
-use std::fs::{ ReadDir, DirEntry };
+use std::fs::{DirEntry, ReadDir};
 use std::path::Path;
-
+use std::{fs, io};
 
 // Source for walk_dir func, struct, and iterator implementation
 // copied from rust nightly source. As of now, it is unstable.
 pub fn walk_dir<P: AsRef<Path>>(path: P) -> io::Result<WalkDir> {
-    let start = try!(fs::read_dir(path));
-    Ok(WalkDir { cur: Some(start), stack: Vec::new() })
+    let start = fs::read_dir(path)?;
+    Ok(WalkDir {
+        cur: Some(start),
+        stack: Vec::new(),
+    })
 }
 
 pub struct WalkDir {
@@ -32,7 +33,7 @@ impl Iterator for WalkDir {
                         if path_metadata.is_dir() {
                             self.stack.push(fs::read_dir(&*path));
                         }
-                        return Some(Ok(next))
+                        return Some(Ok(next));
                     }
                     None => {}
                 }
@@ -58,14 +59,19 @@ impl RelativeFrom for Path {
     }
 }
 
-fn iter_after<A, I, J>(mut iter: I, mut prefix: J) -> Option<I> where
-    I: Iterator<Item=A> + Clone, J: Iterator<Item=A>, A: PartialEq
+fn iter_after<A, I, J>(mut iter: I, mut prefix: J) -> Option<I>
+where
+    I: Iterator<Item = A> + Clone,
+    J: Iterator<Item = A>,
+    A: PartialEq,
 {
     loop {
         let mut iter_next = iter.clone();
         match (iter_next.next(), prefix.next()) {
             (Some(x), Some(y)) => {
-                if x != y { return None }
+                if x != y {
+                    return None;
+                }
             }
             (Some(_), None) => return Some(iter),
             (None, None) => return Some(iter),
@@ -74,4 +80,3 @@ fn iter_after<A, I, J>(mut iter: I, mut prefix: J) -> Option<I> where
         iter = iter_next;
     }
 }
-

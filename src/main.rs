@@ -3,12 +3,11 @@ extern crate handlebars;
 extern crate pulldown_cmark;
 extern crate serde;
 
-
 use docopt::Docopt;
+use handlebars::Handlebars;
 use serde::Deserialize;
 use std::fs;
-use std::path::{ Path, PathBuf };
-use handlebars::Handlebars;
+use std::path::{Path, PathBuf};
 use util::RelativeFrom;
 
 mod file_type;
@@ -19,14 +18,14 @@ static USAGE: &'static str = "
 Usage: rust-notes [options] <source> <dest>
 
 Options:
-    -b, --base-url BASE     Base URL for site. Start with '/' but do not end with one. Should not include hostname.
+    -b, --base-url BASE     Base URL for site. Should not include hostname.
 ";
 
 #[derive(Debug, Deserialize)]
 struct Args {
     arg_source: String,
     arg_dest: String,
-    flag_base_url: Option<String>
+    flag_base_url: Option<String>,
 }
 
 fn main() {
@@ -37,52 +36,68 @@ fn main() {
     match Generator::new(args) {
         Ok(generator) => {
             generator.begin();
-        },
-        Err(message) => panic!(message)
+        }
+        Err(message) => panic!(message),
     }
 }
 
 fn cp_dir(source: &Path, dest: &Path) {
-    fs::create_dir(dest).ok().expect("Problem copying directory");
-    for item in util::walk_dir(source).ok().expect("Problem copying directory") {
+    fs::create_dir(dest)
+        .ok()
+        .expect("Problem copying directory");
+    for item in util::walk_dir(source)
+        .ok()
+        .expect("Problem copying directory")
+    {
         let item = item.ok().expect("Problem copying directory").path();
-        let item_metadata = fs::metadata(&item).ok().expect("Error fetching file metadata");
-        let relative = item
-            .my_relative_from(source)
-            .unwrap();
+        let item_metadata = fs::metadata(&item)
+            .ok()
+            .expect("Error fetching file metadata");
+        let relative = item.my_relative_from(source).unwrap();
         let dest_path = dest.clone().join(&relative);
         if item_metadata.is_file() {
-            fs::copy(&item, &dest_path).ok().expect("Problem copying directory");
+            fs::copy(&item, &dest_path)
+                .ok()
+                .expect("Problem copying directory");
         } else {
-            fs::create_dir(&dest_path).ok().expect("Problem copying directory");
+            fs::create_dir(&dest_path)
+                .ok()
+                .expect("Problem copying directory");
         }
     }
 }
 
-pub struct AppContext {
+pub struct AppContext<'a> {
     root_source: PathBuf,
     root_dest: PathBuf,
     root_notes: PathBuf,
-    handlebars: Handlebars,
+    handlebars: Handlebars<'a>,
     base_url: String,
 }
 
-struct Generator {
-    context: AppContext,
-    file_type_manager: file_type::FileTypeManager
+struct Generator<'a> {
+    context: AppContext<'a>,
+    file_type_manager: file_type::FileTypeManager,
 }
 
-impl Generator {
-
+impl<'a> Generator<'a> {
     fn convert(&self, path: &Path) {
-        self.file_type_manager.create_file_type(path).convert(&self.context);
+        self.file_type_manager
+            .create_file_type(path)
+            .convert(&self.context);
     }
 
-    pub fn new(args: Args) -> Result<Generator, &'static str> {
+    pub fn new(args: Args) -> Result<Generator<'a>, &'static str> {
         let source_path = Path::new(&args.arg_source);
-        let source_path_metadata = fs::metadata(source_path).ok().expect("Error fetching file metadata");
+        let source_path_metadata = fs::metadata(source_path).ok().expect(&format!(
+            "Error fetching file metadata. Source path: {:?}",
+            source_path
+        ));
         let dest_path = Path::new(&args.arg_dest);
-        let dest_path_metadata = fs::metadata(dest_path).ok().expect("Error fetching file metadata");
+        let dest_path_metadata = fs::metadata(dest_path).ok().expect(&format!(
+            "Error fetching file metadata. Dest path: {:?}",
+            dest_path
+        ));
 
         if !source_path_metadata.is_dir() {
             return Err("Invalid source path");
@@ -91,13 +106,14 @@ impl Generator {
         if !dest_path_metadata.is_dir() {
             match fs::create_dir_all(&dest_path) {
                 Err(_) => return Err("Cannot create destination directory"),
-                _ => ()
+                _ => (),
             }
         }
 
         // Validate source
         let notes_source_path = source_path.join("notes");
-        let notes_source_path_metadata = fs::metadata(source_path).ok()
+        let notes_source_path_metadata = fs::metadata(source_path)
+            .ok()
             .expect("Error fetching file metadata");
 
         if !notes_source_path_metadata.is_dir() {
@@ -110,34 +126,34 @@ impl Generator {
                 let mut result = String::from(base_url.trim_matches('/'));
                 result = format!("/{}/", result);
                 Some(result)
-            },
-            None => None
+            }
+            None => None,
         };
-
 
         let mut context = AppContext {
             root_source: PathBuf::from(source_path),
             root_dest: PathBuf::from(dest_path),
             root_notes: notes_source_path,
             handlebars: Handlebars::new(),
-            base_url: base_url.clone().unwrap_or(String::from("/"))
+            base_url: base_url.clone().unwrap_or(String::from("/")),
         };
 
         let file_type_manager = file_type::FileTypeManager::new();
-        try!(file_type_manager.initialize_app_context(&mut context));
+        file_type_manager.initialize_app_context(&mut context)?;
 
         // Good to go! Let's return something good
 
-        Ok(Generator{
+        Ok(Generator {
             context: context,
-            file_type_manager: file_type_manager
+            file_type_manager: file_type_manager,
         })
     }
 
     pub fn begin(&self) {
         self.clean_dest();
         let assets_source_path = self.context.root_source.join("assets");
-        let assets_source_path_metadata = fs::metadata(&assets_source_path).ok()
+        let assets_source_path_metadata = fs::metadata(&assets_source_path)
+            .ok()
             .expect("Error fetching file metadata");
         if assets_source_path_metadata.is_dir() {
             let assets_dest_path = self.context.root_dest.join("assets");
@@ -149,17 +165,20 @@ impl Generator {
         }
     }
 
-
-
     fn clean_dest(&self) {
         for entry in fs::read_dir(&self.context.root_dest).ok().unwrap() {
             let entry = entry.ok().unwrap();
-            let entry_metadata = fs::metadata(entry.path()).ok()
+            let entry_metadata = fs::metadata(entry.path())
+                .ok()
                 .expect("Error fetching file metadata");
             if entry_metadata.is_file() {
-                fs::remove_file(entry.path()).ok().expect("Could not remove file");
+                fs::remove_file(entry.path())
+                    .ok()
+                    .expect("Could not remove file");
             } else {
-                fs::remove_dir_all(entry.path()).ok().expect("Could not remove directory");
+                fs::remove_dir_all(entry.path())
+                    .ok()
+                    .expect("Could not remove directory");
             }
         }
     }
