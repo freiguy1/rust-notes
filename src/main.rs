@@ -8,7 +8,7 @@ use handlebars::Handlebars;
 use serde::Deserialize;
 use std::fs;
 use std::path::{Path, PathBuf};
-use util::RelativeFrom;
+use crate::util::RelativeFrom;
 
 mod file_type;
 mod util;

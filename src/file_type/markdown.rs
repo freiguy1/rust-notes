@@ -7,14 +7,14 @@ use pulldown_cmark::Parser;
 
 use serde::Serialize;
 
-use ::file_type::{create_parent_links, read_file, FileType, Link};
-use ::util::RelativeFrom;
+use crate::file_type::{create_parent_links, read_file, FileType, Link};
+use crate::util::RelativeFrom;
 
 static TYPE_STR: &'static str = "markdown";
 
 pub struct MarkdownFactory;
 
-impl ::file_type::FileTypeFactory for MarkdownFactory {
+impl crate::file_type::FileTypeFactory for MarkdownFactory {
     fn try_create(&self, path: &Path) -> Option<Box<dyn FileType>> {
         let name = path.file_name().unwrap().to_str().unwrap();
         let path_metadata = metadata(&path).ok().expect("Could not fetch file metadata");
@@ -31,7 +31,7 @@ impl ::file_type::FileTypeFactory for MarkdownFactory {
         }
     }
 
-    fn initialize(&self, app_context: &mut ::AppContext) -> Result<(), &'static str> {
+    fn initialize(&self, app_context: &mut crate::AppContext) -> Result<(), &'static str> {
         let header_hbs_path = app_context.root_source.join("partials/header.hbs");
         if !metadata(&header_hbs_path).is_ok() {
             return Err("Missing partials/header.hbs");
@@ -72,7 +72,7 @@ pub struct Markdown {
 }
 
 impl FileType for Markdown {
-    fn get_url(&self, context: &::AppContext) -> String {
+    fn get_url(&self, context: &crate::AppContext) -> String {
         let file_name = self.path.file_stem().unwrap().to_str().unwrap();
         let relative = self
             .path
@@ -94,7 +94,7 @@ impl FileType for Markdown {
         )
     }
 
-    fn convert(&self, context: &::AppContext) {
+    fn convert(&self, context: &crate::AppContext) {
         let relative = self
             .path
             .my_relative_from(&context.root_notes)

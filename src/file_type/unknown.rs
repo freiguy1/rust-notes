@@ -1,15 +1,15 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use ::util::RelativeFrom;
+use crate::util::RelativeFrom;
 
-use ::file_type::FileType;
+use crate::file_type::FileType;
 
 static TYPE_STR: &'static str = "unknown";
 
 pub struct UnknownFactory;
 
-impl ::file_type::FileTypeFactory for UnknownFactory {
+impl crate::file_type::FileTypeFactory for UnknownFactory {
     fn try_create(&self, path: &Path) -> Option<Box<dyn FileType>> {
         Some(Box::new(Unknown {
             path: PathBuf::from(path),
@@ -17,7 +17,7 @@ impl ::file_type::FileTypeFactory for UnknownFactory {
         }))
     }
 
-    fn initialize(&self, _: &mut ::AppContext) -> Result<(), &'static str> {
+    fn initialize(&self, _: &mut crate::AppContext) -> Result<(), &'static str> {
         Ok(())
     }
 }
@@ -27,8 +27,8 @@ pub struct Unknown {
     type_str: &'static str,
 }
 
-impl ::file_type::FileType for Unknown {
-    fn get_url(&self, context: &::AppContext) -> String {
+impl crate::file_type::FileType for Unknown {
+    fn get_url(&self, context: &crate::AppContext) -> String {
         let file_name = self.path.file_name().expect("Problem parsing relative url");
         let relative = self
             .path
@@ -47,7 +47,7 @@ impl ::file_type::FileType for Unknown {
         )
     }
 
-    fn convert(&self, context: &::AppContext) {
+    fn convert(&self, context: &crate::AppContext) {
         let relative = self
             .path
             .my_relative_from(&context.root_notes)

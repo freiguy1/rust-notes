@@ -3,6 +3,7 @@
 name = "rust-notes"
 version = "0.0.1"
 authors = ["Ethan Frei <ethan.frei@gmail.com>"]
+edition = "2018"
 
 [dependencies]
 

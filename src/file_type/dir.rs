@@ -6,14 +6,14 @@ use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
-use ::file_type::{create_parent_links, read_file, FileType, Link};
-use ::util::RelativeFrom;
+use crate::file_type::{create_parent_links, read_file, FileType, Link};
+use crate::util::RelativeFrom;
 
 static TYPE_STR: &'static str = "dir";
 
 pub struct DirFactory;
 
-impl ::file_type::FileTypeFactory for DirFactory {
+impl crate::file_type::FileTypeFactory for DirFactory {
     fn try_create(&self, path: &Path) -> Option<Box<dyn FileType>> {
         if metadata(&path)
             .ok()
@@ -23,14 +23,14 @@ impl ::file_type::FileTypeFactory for DirFactory {
             Some(Box::new(Dir {
                 path: PathBuf::from(path),
                 type_str: TYPE_STR,
-                file_type_manager: ::file_type::FileTypeManager::new(),
+                file_type_manager: crate::file_type::FileTypeManager::new(),
             }))
         } else {
             None
         }
     }
 
-    fn initialize(&self, app_context: &mut ::AppContext) -> Result<(), &'static str> {
+    fn initialize(&self, app_context: &mut crate::AppContext) -> Result<(), &'static str> {
         // Validate generic stuff
         let header_hbs_path = app_context.root_source.join("partials/header.hbs");
         if !metadata(&header_hbs_path).is_ok() {
@@ -75,11 +75,11 @@ impl ::file_type::FileTypeFactory for DirFactory {
 pub struct Dir {
     path: PathBuf,
     type_str: &'static str,
-    file_type_manager: ::file_type::FileTypeManager,
+    file_type_manager: crate::file_type::FileTypeManager,
 }
 
 impl Dir {
-    fn get_children(&self, context: &::AppContext) -> Vec<Child> {
+    fn get_children(&self, context: &crate::AppContext) -> Vec<Child> {
         let mut result: Vec<Child> = Vec::new();
 
         match fs::read_dir(&self.path) {
@@ -113,7 +113,7 @@ impl Dir {
 }
 
 impl FileType for Dir {
-    fn get_url(&self, context: &::AppContext) -> String {
+    fn get_url(&self, context: &crate::AppContext) -> String {
         let relative = self
             .path
             .my_relative_from(&context.root_notes)
@@ -126,7 +126,7 @@ impl FileType for Dir {
         format!("{}{}", context.base_url, relative)
     }
 
-    fn convert(&self, context: &::AppContext) {
+    fn convert(&self, context: &crate::AppContext) {
         let relative = self
             .path
             .my_relative_from(&context.root_notes)
