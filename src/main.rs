@@ -1,14 +1,9 @@
-extern crate docopt;
-extern crate handlebars;
-extern crate pulldown_cmark;
-extern crate serde;
-
+use crate::util::RelativeFrom;
 use docopt::Docopt;
 use handlebars::Handlebars;
 use serde::Deserialize;
 use std::fs;
 use std::path::{Path, PathBuf};
-use crate::util::RelativeFrom;
 
 mod file_type;
 mod util;
