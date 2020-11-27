@@ -17,7 +17,7 @@ impl crate::file_type::FileTypeFactory for UnknownFactory {
         }))
     }
 
-    fn initialize(&self, _: &mut crate::AppContext) -> Result<(), &'static str> {
+    fn initialize(&self, _: &mut crate::AppContext<'_>) -> Result<(), &'static str> {
         Ok(())
     }
 }
@@ -28,7 +28,7 @@ pub struct Unknown {
 }
 
 impl crate::file_type::FileType for Unknown {
-    fn get_url(&self, context: &crate::AppContext) -> String {
+    fn get_url(&self, context: &crate::AppContext<'_>) -> String {
         let file_name = self.path.file_name().expect("Problem parsing relative url");
         let relative = self
             .path
@@ -47,7 +47,7 @@ impl crate::file_type::FileType for Unknown {
         )
     }
 
-    fn convert(&self, context: &crate::AppContext) {
+    fn convert(&self, context: &crate::AppContext<'_>) {
         let relative = self
             .path
             .my_relative_from(&context.root_notes)

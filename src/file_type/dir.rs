@@ -30,7 +30,7 @@ impl crate::file_type::FileTypeFactory for DirFactory {
         }
     }
 
-    fn initialize(&self, app_context: &mut crate::AppContext) -> Result<(), &'static str> {
+    fn initialize(&self, app_context: &mut crate::AppContext<'_>) -> Result<(), &'static str> {
         // Validate generic stuff
         let header_hbs_path = app_context.root_source.join("partials/header.hbs");
         if !metadata(&header_hbs_path).is_ok() {
@@ -79,7 +79,7 @@ pub struct Dir {
 }
 
 impl Dir {
-    fn get_children(&self, context: &crate::AppContext) -> Vec<Child> {
+    fn get_children(&self, context: &crate::AppContext<'_>) -> Vec<Child> {
         let mut result: Vec<Child> = Vec::new();
 
         match fs::read_dir(&self.path) {
@@ -113,7 +113,7 @@ impl Dir {
 }
 
 impl FileType for Dir {
-    fn get_url(&self, context: &crate::AppContext) -> String {
+    fn get_url(&self, context: &crate::AppContext<'_>) -> String {
         let relative = self
             .path
             .my_relative_from(&context.root_notes)
@@ -126,7 +126,7 @@ impl FileType for Dir {
         format!("{}{}", context.base_url, relative)
     }
 
-    fn convert(&self, context: &crate::AppContext) {
+    fn convert(&self, context: &crate::AppContext<'_>) {
         let relative = self
             .path
             .my_relative_from(&context.root_notes)

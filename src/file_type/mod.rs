@@ -9,14 +9,14 @@ mod markdown;
 mod unknown;
 
 pub trait FileType {
-    fn get_url(&self, context: &crate::AppContext) -> String;
-    fn convert(&self, context: &crate::AppContext);
+    fn get_url(&self, context: &crate::AppContext<'_>) -> String;
+    fn convert(&self, context: &crate::AppContext<'_>);
     fn get_type_str(&self) -> &'static str;
 }
 
 trait FileTypeFactory {
     fn try_create(&self, path: &Path) -> Option<Box<dyn FileType>>;
-    fn initialize(&self, app_context: &mut crate::AppContext) -> Result<(), &'static str>;
+    fn initialize(&self, app_context: &mut crate::AppContext<'_>) -> Result<(), &'static str>;
 }
 
 pub struct FileTypeManager {
@@ -37,7 +37,7 @@ impl FileTypeManager {
 
     pub fn initialize_app_context(
         &self,
-        app_context: &mut crate::AppContext,
+        app_context: &mut crate::AppContext<'_>,
     ) -> Result<(), &'static str> {
         for factory in self.factories.iter() {
             factory.initialize(app_context)?;

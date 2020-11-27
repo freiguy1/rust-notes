@@ -31,7 +31,7 @@ impl crate::file_type::FileTypeFactory for MarkdownFactory {
         }
     }
 
-    fn initialize(&self, app_context: &mut crate::AppContext) -> Result<(), &'static str> {
+    fn initialize(&self, app_context: &mut crate::AppContext<'_>) -> Result<(), &'static str> {
         let header_hbs_path = app_context.root_source.join("partials/header.hbs");
         if !metadata(&header_hbs_path).is_ok() {
             return Err("Missing partials/header.hbs");
@@ -72,7 +72,7 @@ pub struct Markdown {
 }
 
 impl FileType for Markdown {
-    fn get_url(&self, context: &crate::AppContext) -> String {
+    fn get_url(&self, context: &crate::AppContext<'_>) -> String {
         let file_name = self.path.file_stem().unwrap().to_str().unwrap();
         let relative = self
             .path
@@ -94,7 +94,7 @@ impl FileType for Markdown {
         )
     }
 
-    fn convert(&self, context: &crate::AppContext) {
+    fn convert(&self, context: &crate::AppContext<'_>) {
         let relative = self
             .path
             .my_relative_from(&context.root_notes)
