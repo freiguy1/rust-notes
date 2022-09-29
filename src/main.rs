@@ -32,7 +32,7 @@ fn main() {
         Ok(generator) => {
             generator.begin();
         }
-        Err(message) => panic!(message),
+        Err(message) => panic!("{}", message),
     }
 }
 
